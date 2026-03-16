@@ -1,0 +1,108 @@
+<!-- ═══════════════════════════════════════════════════════════
+     USER PORTAL — QnA Pairs Page
+     Search and filter historical QnA pairs.
+     Saved in DynamoDB, accessible to both admin and users.
+     ═══════════════════════════════════════════════════════════ -->
+<div class="page" id="page-user-qna">
+  <div class="pg-hdr">
+    <div>
+      <h1>QnA Pairs</h1>
+      <p class="pg-sub">Browse and search all question-answer pairs from your meeting sessions.</p>
+    </div>
+  </div>
+
+  <!-- Search and filter bar -->
+  <div class="filter-bar mb-4">
+    <div class="filter-bar__search">
+      <span>🔍</span>
+      <input type="text" placeholder="Search questions or answers...">
+    </div>
+    <select class="filter-select">
+      <option>All Projects</option>
+      <option>AXR — Axrail Cloud Migration</option>
+      <option>FIN — FinServ Sales Enablement</option>
+      <option>HLT — HealthTech Demo Calls</option>
+    </select>
+    <select class="filter-select">
+      <option>All Sessions</option>
+      <option>Q1 Architecture Review (Live)</option>
+      <option>FinServ Product Demo</option>
+      <option>Infrastructure Cost Review</option>
+    </select>
+  </div>
+
+  <!-- QnA cards list -->
+  <div class="d-flex flex-col gap-3">
+    <div class="qna-card">
+      <div class="qna-card__meta">
+        <span class="qna-card__project">AXR</span>
+        <span>Q1 Architecture Review</span>
+        <span>·</span>
+        <span>Mar 16, 9:05 AM</span>
+      </div>
+      <div class="qna-card__q">Q: What is the recommended VPC architecture for multi-AZ deployment?</div>
+      <div class="qna-card__a">For multi-AZ deployment, we recommend a 3-tier VPC with public, private, and data subnets across at least 2 AZs. Each tier uses separate route tables with NAT gateways in each AZ for high availability.</div>
+      <div class="qna-card__actions">
+        <div class="audio-row" style="flex:1">
+          <button class="btn btn--ghost btn--sm">▶</button>
+          <div class="audio-row__wave"></div>
+          <span class="audio-row__time">0:06</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="qna-card">
+      <div class="qna-card__meta">
+        <span class="qna-card__project">AXR</span>
+        <span>Q1 Architecture Review</span>
+        <span>·</span>
+        <span>Mar 16, 9:12 AM</span>
+      </div>
+      <div class="qna-card__q">Q: How does the auto-scaling policy handle sudden traffic spikes?</div>
+      <div class="qna-card__a">The auto-scaling policy uses target tracking with a CPU utilization target of 65%. Step scaling kicks in at 80% for faster response. We also use predictive scaling based on the past 14-day traffic pattern.</div>
+      <div class="qna-card__actions">
+        <div class="audio-row" style="flex:1">
+          <button class="btn btn--ghost btn--sm">▶</button>
+          <div class="audio-row__wave"></div>
+          <span class="audio-row__time">0:08</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="qna-card">
+      <div class="qna-card__meta">
+        <span class="qna-card__project">FIN</span>
+        <span>FinServ Product Demo</span>
+        <span>·</span>
+        <span>Mar 15, 2:22 PM</span>
+      </div>
+      <div class="qna-card__q">Q: Is the system compliant with PCI DSS requirements?</div>
+      <div class="qna-card__a">Yes, the infrastructure is designed with PCI DSS Level 1 compliance in mind. All cardholder data is encrypted at rest with AES-256 and in transit with TLS 1.3. We maintain quarterly ASV scans.</div>
+      <div class="qna-card__actions">
+        <div class="audio-row" style="flex:1">
+          <button class="btn btn--ghost btn--sm">▶</button>
+          <div class="audio-row__wave"></div>
+          <span class="audio-row__time">0:07</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="qna-card">
+      <div class="qna-card__meta">
+        <span class="qna-card__project">AXR</span>
+        <span>Infrastructure Cost Review</span>
+        <span>·</span>
+        <span>Mar 14, 10:35 AM</span>
+      </div>
+      <div class="qna-card__q">Q: What is the estimated monthly cost for the proposed architecture?</div>
+      <div class="qna-card__a">Based on the sizing in our rate card, the estimated monthly cost is approximately $4,200 for the base infrastructure, scaling to $6,800 under peak load. This includes EC2, RDS, and data transfer costs.</div>
+      <div class="qna-card__actions">
+        <div class="audio-row" style="flex:1">
+          <button class="btn btn--ghost btn--sm">▶</button>
+          <div class="audio-row__wave"></div>
+          <span class="audio-row__time">0:06</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

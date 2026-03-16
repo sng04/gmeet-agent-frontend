@@ -1,0 +1,111 @@
+<!-- ═══════════════════════════════════════════════════════════
+     USER PORTAL — Session History Page
+     - Search and filter capabilities
+     - Sorted: live first, then completed (no "failed" status)
+     - Buttons aligned properly; Review button has subtle light gray bg
+     ═══════════════════════════════════════════════════════════ -->
+<div class="page" id="page-user-sessions">
+  <div class="pg-hdr">
+    <div>
+      <h1>Sessions</h1>
+      <p class="pg-sub">All your meeting sessions. Active sessions appear first.</p>
+    </div>
+    <div class="pg-actions">
+      <button class="btn btn--pri">+ New Session</button>
+    </div>
+  </div>
+
+  <!-- Search and filter bar -->
+  <div class="filter-bar mb-4">
+    <div class="filter-bar__search">
+      <span>🔍</span>
+      <input type="text" placeholder="Search sessions...">
+    </div>
+    <select class="filter-select">
+      <option>All Projects</option>
+      <option>AXR — Axrail Cloud Migration</option>
+      <option>FIN — FinServ Sales Enablement</option>
+      <option>HLT — HealthTech Demo Calls</option>
+    </select>
+    <select class="filter-select">
+      <option>All Status</option>
+      <option>Live</option>
+      <option>Completed</option>
+    </select>
+  </div>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Session</th>
+          <th>Project</th>
+          <th>Agent</th>
+          <th>Status</th>
+          <th>Date</th>
+          <th>Duration</th>
+          <th style="text-align:right">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Live sessions first -->
+        <tr class="clickable">
+          <td style="font-weight:500">Axrail Q1 Architecture Review</td>
+          <td><span class="project-tag">AXR</span></td>
+          <td class="text-sm">TechBot Alpha</td>
+          <td><span class="badge badge--live"><span class="badge__dot"></span>Live</span></td>
+          <td class="timestamp">Mar 16, 9:00 AM</td>
+          <td class="text-sm text-muted">—</td>
+          <td style="text-align:right">
+            <button class="btn btn--pri btn--sm" style="min-width:72px">Join</button>
+          </td>
+        </tr>
+        <tr class="clickable">
+          <td style="font-weight:500">Client Onboarding — Phase 2</td>
+          <td><span class="project-tag">AXR</span></td>
+          <td class="text-sm">SalesHelper</td>
+          <td><span class="badge badge--live"><span class="badge__dot"></span>Live</span></td>
+          <td class="timestamp">Mar 16, 9:30 AM</td>
+          <td class="text-sm text-muted">—</td>
+          <td style="text-align:right">
+            <button class="btn btn--pri btn--sm" style="min-width:72px">Join</button>
+          </td>
+        </tr>
+        <!-- Completed sessions -->
+        <tr class="clickable">
+          <td style="font-weight:500">FinServ Product Demo</td>
+          <td><span class="project-tag">FIN</span></td>
+          <td class="text-sm">FinBot</td>
+          <td><span class="badge badge--completed"><span class="badge__dot"></span>Completed</span></td>
+          <td class="timestamp">Mar 15, 2:00 PM</td>
+          <td class="text-sm">1h 12m</td>
+          <td style="text-align:right">
+            <button class="btn btn--sec btn--sm" style="min-width:72px;background:var(--gray-50);border-color:var(--gray-200)">Review</button>
+          </td>
+        </tr>
+        <tr class="clickable">
+          <td style="font-weight:500">Infrastructure Cost Review</td>
+          <td><span class="project-tag">AXR</span></td>
+          <td class="text-sm">TechBot Alpha</td>
+          <td><span class="badge badge--completed"><span class="badge__dot"></span>Completed</span></td>
+          <td class="timestamp">Mar 14, 10:00 AM</td>
+          <td class="text-sm">1h 05m</td>
+          <td style="text-align:right">
+            <button class="btn btn--sec btn--sm" style="min-width:72px;background:var(--gray-50);border-color:var(--gray-200)">Review</button>
+          </td>
+        </tr>
+        <tr class="clickable">
+          <td style="font-weight:500">HealthTech Intro Call</td>
+          <td><span class="project-tag">HLT</span></td>
+          <td class="text-sm">TechBot Alpha</td>
+          <td><span class="badge badge--completed"><span class="badge__dot"></span>Completed</span></td>
+          <td class="timestamp">Mar 12, 4:00 PM</td>
+          <td class="text-sm">45m</td>
+          <td style="text-align:right">
+            <button class="btn btn--sec btn--sm" style="min-width:72px;background:var(--gray-50);border-color:var(--gray-200)">Review</button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>

@@ -1,0 +1,64 @@
+<!-- ═══════════════════════════════════════════════════════════
+     ADMIN PORTAL — Projects List Page
+     Clicking a project → navigates to project detail (full page).
+     "Create Project" → navigates to create-project page (full page, NOT popup).
+     ═══════════════════════════════════════════════════════════ -->
+<div class="page" id="page-projects">
+  <div class="pg-hdr">
+    <div>
+      <h1>Projects</h1>
+      <p class="pg-sub">Manage projects, their agents, and knowledge base collections.</p>
+    </div>
+    <div class="pg-actions">
+      <button class="btn btn--pri" data-nav="project-create">+ Create Project</button>
+    </div>
+  </div>
+
+  <div class="filter-bar mb-4">
+    <div class="filter-bar__search">
+      <span>🔍</span>
+      <input type="text" placeholder="Search projects...">
+    </div>
+  </div>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Project</th>
+          <th>Prefix</th>
+          <th>Agents</th>
+          <th>Sessions</th>
+          <th>Documents</th>
+          <th>Last Updated</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="clickable" data-nav="project-detail" data-id="proj_001">
+          <td style="font-weight:500">Axrail Cloud Migration</td>
+          <td><span class="project-tag">AXR</span></td>
+          <td>2</td>
+          <td>14</td>
+          <td>3</td>
+          <td class="timestamp timestamp--updated">Mar 14, 10:30 AM</td>
+        </tr>
+        <tr class="clickable" data-nav="project-detail" data-id="proj_002">
+          <td style="font-weight:500">FinServ Sales Enablement</td>
+          <td><span class="project-tag">FIN</span></td>
+          <td>1</td>
+          <td>7</td>
+          <td>2</td>
+          <td class="timestamp timestamp--updated">Mar 15, 2:00 PM</td>
+        </tr>
+        <tr class="clickable" data-nav="project-detail" data-id="proj_003">
+          <td style="font-weight:500">HealthTech Demo Calls</td>
+          <td><span class="project-tag">HLT</span></td>
+          <td>1</td>
+          <td>3</td>
+          <td>0</td>
+          <td class="timestamp timestamp--updated">Mar 12, 4:45 PM</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>

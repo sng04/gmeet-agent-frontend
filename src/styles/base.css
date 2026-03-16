@@ -1,0 +1,121 @@
+/* ═══════════════════════════════════════════════════════════════
+   MeetAgent Design System — Base
+   Global resets, typography, and foundational styles.
+   Depends on: tokens.css
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── RESET ── */
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: var(--font-sans);
+  font-size: var(--fs-base);
+  line-height: var(--lh-normal);
+  color: var(--gray-900);
+  background: var(--gray-50);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--gray-300); border-radius: var(--r-full); }
+::-webkit-scrollbar-thumb:hover { background: var(--gray-400); }
+
+/* ── SELECTION ── */
+::selection { background: var(--pri-100); color: var(--pri-700); }
+
+/* ── LINKS ── */
+a { color: var(--pri-500); text-decoration: none; }
+a:hover { color: var(--pri-600); text-decoration: underline; }
+
+/* ── CODE ── */
+code, pre {
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+}
+code {
+  background: var(--gray-100);
+  padding: 1px 5px;
+  border-radius: var(--r-xs);
+  color: var(--pri-700);
+}
+
+/* ── HEADINGS ── */
+h1, h2, h3, h4, h5, h6 {
+  font-weight: var(--fw-bold);
+  line-height: var(--lh-tight);
+  letter-spacing: var(--ls-tight);
+}
+h1 { font-size: var(--fs-2xl); font-weight: var(--fw-black); }
+h2 { font-size: var(--fs-xl); }
+h3 { font-size: var(--fs-lg); }
+h4 { font-size: var(--fs-md); }
+
+/* ── BODY TEXT ── */
+p { margin-bottom: var(--sp-3); }
+p:last-child { margin-bottom: 0; }
+
+small, .text-sm { font-size: var(--fs-sm); }
+.text-xs { font-size: var(--fs-xs); }
+.text-mono {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  letter-spacing: var(--ls-xwide);
+  text-transform: uppercase;
+  font-weight: var(--fw-medium);
+  color: var(--gray-500);
+}
+
+/* ── INTERACTIVE FOCUS ── */
+:focus-visible {
+  outline: 2px solid var(--pri-400);
+  outline-offset: 2px;
+}
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  box-shadow: var(--sh-focus-pri);
+}
+
+/* ── MISC ── */
+img { max-width: 100%; display: block; }
+button { cursor: pointer; font-family: var(--font-sans); }
+input, select, textarea { font-family: var(--font-sans); }
+
+/* ── ANIMATION BASE ── */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes pageIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.5; }
+}
+@keyframes livePulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.4); }
+  50%      { box-shadow: 0 0 0 8px rgba(239,68,68,0); }
+}
+@keyframes liveDot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.6; transform: scale(1.4); }
+}

@@ -1,0 +1,109 @@
+<!-- ═══════════════════════════════════════════════════════════
+     USER PORTAL — Dashboard Page
+     - Project selector (user may be in multiple projects)
+     - Eye-catching live session widget
+     - Clickable stat cards → navigate to their menu
+     - Recent sessions sorted: live first, then completed
+     - No document widget (users don't access docs)
+     - No "failed" status
+     ═══════════════════════════════════════════════════════════ -->
+<div class="page active" id="page-user-dashboard">
+  <div class="pg-hdr">
+    <div>
+      <h1>Dashboard</h1>
+      <p class="pg-sub">Your meeting overview and recent activity.</p>
+    </div>
+    <div class="pg-actions">
+      <!-- Project selector -->
+      <div class="d-flex items-center gap-2">
+        <span class="text-sm text-muted">Project:</span>
+        <select class="filter-select" style="min-width:220px">
+          <option selected>AXR — Axrail Cloud Migration</option>
+          <option>FIN — FinServ Sales Enablement</option>
+          <option>HLT — HealthTech Demo Calls</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- Live session widget — eye-catching, animated -->
+  <div class="live-widget mb-6">
+    <div class="live-widget__header">
+      <span class="live-widget__pulse"></span>
+      <span class="live-widget__label">Sessions In Progress</span>
+    </div>
+    <div class="live-widget__count">2</div>
+    <div class="live-widget__sub">Axrail Q1 Architecture Review · Client Onboarding — Phase 2</div>
+  </div>
+
+  <!-- Stat cards — clickable, navigate to menus -->
+  <div class="d-grid g3 gap-4 mb-6">
+    <div class="stat clickable" data-nav="user-sessions">
+      <div class="stat-icon stat-icon--blue">📡</div>
+      <span class="stat-label">Total Sessions</span>
+      <span class="stat-val">14</span>
+      <span class="stat-change stat-change--up">↑ 3 this week</span>
+    </div>
+    <div class="stat clickable" data-nav="user-qna">
+      <div class="stat-icon stat-icon--amber">💬</div>
+      <span class="stat-label">QnA Pairs</span>
+      <span class="stat-val">24</span>
+    </div>
+    <div class="stat clickable" data-nav="user-projects">
+      <div class="stat-icon stat-icon--cyan">📁</div>
+      <span class="stat-label">My Projects</span>
+      <span class="stat-val">3</span>
+    </div>
+  </div>
+
+  <!-- Recent sessions: live first, then completed. No "failed" status. -->
+  <div class="tbl-wrap">
+    <div class="tbl-header">
+      <span class="tbl-header__title">Recent Sessions</span>
+      <a href="#" class="btn btn--ghost btn--sm" data-nav="user-sessions">View All →</a>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Session</th>
+          <th>Agent</th>
+          <th>Status</th>
+          <th>Started</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Live sessions first -->
+        <tr class="clickable">
+          <td style="font-weight:500">Axrail Q1 Architecture Review</td>
+          <td>TechBot Alpha</td>
+          <td><span class="badge badge--live"><span class="badge__dot"></span>Live</span></td>
+          <td class="timestamp">Mar 16, 9:00 AM</td>
+          <td><button class="btn btn--pri btn--sm">Join</button></td>
+        </tr>
+        <tr class="clickable">
+          <td style="font-weight:500">Client Onboarding — Phase 2</td>
+          <td>SalesHelper</td>
+          <td><span class="badge badge--live"><span class="badge__dot"></span>Live</span></td>
+          <td class="timestamp">Mar 16, 9:30 AM</td>
+          <td><button class="btn btn--pri btn--sm">Join</button></td>
+        </tr>
+        <!-- Completed sessions -->
+        <tr class="clickable">
+          <td style="font-weight:500">FinServ Product Demo</td>
+          <td>FinBot</td>
+          <td><span class="badge badge--completed"><span class="badge__dot"></span>Completed</span></td>
+          <td class="timestamp">Mar 15, 2:00 PM</td>
+          <td><button class="btn btn--sec btn--sm" style="background:var(--gray-50)">Review</button></td>
+        </tr>
+        <tr class="clickable">
+          <td style="font-weight:500">Infrastructure Cost Review</td>
+          <td>TechBot Alpha</td>
+          <td><span class="badge badge--completed"><span class="badge__dot"></span>Completed</span></td>
+          <td class="timestamp">Mar 14, 10:00 AM</td>
+          <td><button class="btn btn--sec btn--sm" style="background:var(--gray-50)">Review</button></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>

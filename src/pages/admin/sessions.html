@@ -1,0 +1,93 @@
+<!-- ═══════════════════════════════════════════════════════════
+     ADMIN PORTAL — Sessions Page
+     Admin views sessions and QnA pairs. No live/retro mode access.
+     ═══════════════════════════════════════════════════════════ -->
+<div class="page" id="page-admin-sessions">
+  <div class="pg-hdr">
+    <div>
+      <h1>Sessions</h1>
+      <p class="pg-sub">Monitor all meeting sessions across projects.</p>
+    </div>
+  </div>
+
+  <div class="filter-bar mb-4">
+    <div class="filter-bar__search">
+      <span>🔍</span>
+      <input type="text" placeholder="Search sessions...">
+    </div>
+    <select class="filter-select">
+      <option>All Projects</option>
+      <option>AXR — Axrail Cloud Migration</option>
+      <option>FIN — FinServ Sales Enablement</option>
+      <option>HLT — HealthTech Demo Calls</option>
+    </select>
+    <select class="filter-select">
+      <option>All Status</option>
+      <option>Live</option>
+      <option>Completed</option>
+    </select>
+  </div>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Session</th>
+          <th>Project</th>
+          <th>Agent</th>
+          <th>Status</th>
+          <th>QnA Pairs</th>
+          <th>Date</th>
+          <th>Duration</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td style="font-weight:500">Axrail Q1 Architecture Review</td>
+          <td><span class="project-tag">AXR</span></td>
+          <td class="text-sm">TechBot Alpha</td>
+          <td><span class="badge badge--live"><span class="badge__dot"></span>Live</span></td>
+          <td>3</td>
+          <td class="timestamp">Mar 16, 9:00 AM</td>
+          <td class="text-sm text-muted">—</td>
+        </tr>
+        <tr>
+          <td style="font-weight:500">Client Onboarding — Phase 2</td>
+          <td><span class="project-tag">AXR</span></td>
+          <td class="text-sm">SalesHelper</td>
+          <td><span class="badge badge--live"><span class="badge__dot"></span>Live</span></td>
+          <td>1</td>
+          <td class="timestamp">Mar 16, 9:30 AM</td>
+          <td class="text-sm text-muted">—</td>
+        </tr>
+        <tr>
+          <td style="font-weight:500">FinServ Product Demo</td>
+          <td><span class="project-tag">FIN</span></td>
+          <td class="text-sm">FinBot</td>
+          <td><span class="badge badge--completed"><span class="badge__dot"></span>Completed</span></td>
+          <td>8</td>
+          <td class="timestamp">Mar 15, 2:00 PM</td>
+          <td class="text-sm">1h 12m</td>
+        </tr>
+        <tr>
+          <td style="font-weight:500">Infrastructure Cost Review</td>
+          <td><span class="project-tag">AXR</span></td>
+          <td class="text-sm">TechBot Alpha</td>
+          <td><span class="badge badge--completed"><span class="badge__dot"></span>Completed</span></td>
+          <td>12</td>
+          <td class="timestamp">Mar 14, 10:00 AM</td>
+          <td class="text-sm">1h 05m</td>
+        </tr>
+        <tr>
+          <td style="font-weight:500">HealthTech Intro Call</td>
+          <td><span class="project-tag">HLT</span></td>
+          <td class="text-sm">TechBot Alpha</td>
+          <td><span class="badge badge--completed"><span class="badge__dot"></span>Completed</span></td>
+          <td>5</td>
+          <td class="timestamp">Mar 12, 4:00 PM</td>
+          <td class="text-sm">45m</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>

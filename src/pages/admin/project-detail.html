@@ -1,0 +1,88 @@
+<!-- ═══════════════════════════════════════════════════════════
+     ADMIN PORTAL — Project Detail Page (FULL PAGE, not popup)
+     Shows project info, linked agents, knowledge base docs, sessions.
+     Edit project settings inline on this page.
+     ═══════════════════════════════════════════════════════════ -->
+<div class="page" id="page-project-detail">
+
+  <div class="breadcrumb">
+    <a href="#" data-nav="projects">Projects</a>
+    <span class="breadcrumb__sep">›</span>
+    <span class="breadcrumb__current">Axrail Cloud Migration</span>
+  </div>
+
+  <div class="pg-hdr">
+    <div>
+      <h1>Axrail Cloud Migration</h1>
+      <p class="pg-sub">
+        <span class="project-tag">AXR</span>
+        <span class="text-muted" style="margin-left:8px">Created Feb 10, 2026</span>
+        <span class="timestamp timestamp--updated" style="margin-left:12px">Last updated: Mar 14, 10:30 AM</span>
+      </p>
+    </div>
+    <div class="pg-actions">
+      <button class="btn btn--danger-outline btn--sm">Delete Project</button>
+      <button class="btn btn--pri">Save Changes</button>
+    </div>
+  </div>
+
+  <!-- Project settings card -->
+  <div class="card mb-6">
+    <div class="card__header"><h3>Project Settings</h3></div>
+    <div class="card__body">
+      <div class="d-flex gap-6">
+        <div class="form-group" style="flex:1">
+          <label class="form-label">Project Name <span class="required">*</span></label>
+          <input class="form-input" type="text" value="Axrail Cloud Migration">
+        </div>
+        <div class="form-group" style="width:120px">
+          <label class="form-label">Prefix <span class="required">*</span></label>
+          <input class="form-input" type="text" value="AXR" maxlength="5" style="font-family:var(--font-mono);text-transform:uppercase">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Description</label>
+        <textarea class="form-textarea" rows="2" style="min-height:60px;font-family:var(--font-sans)">Cloud migration consulting meetings for Axrail internal infra.</textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabs: Agents | Knowledge Base | Sessions -->
+  <div class="tabs">
+    <div class="tab active">Agents (2)</div>
+    <div class="tab">Knowledge Base (3)</div>
+    <div class="tab">Sessions (14)</div>
+  </div>
+
+  <!-- Agents tab content -->
+  <div class="tbl-wrap">
+    <div class="tbl-header">
+      <span class="tbl-header__title">Linked Agents</span>
+      <button class="btn btn--sec btn--sm">+ Link Agent</button>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Agent</th>
+          <th>Status</th>
+          <th>Gmail</th>
+          <th>Last Updated</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="clickable" data-nav="agent-detail" data-id="agt_001">
+          <td style="font-weight:500">TechBot Alpha</td>
+          <td><span class="badge badge--active"><span class="badge__dot"></span>Active</span></td>
+          <td class="text-sm text-muted">techbot.alpha@axrail-agents.com</td>
+          <td class="timestamp timestamp--updated">Mar 14, 10:30 AM</td>
+        </tr>
+        <tr class="clickable" data-nav="agent-detail" data-id="agt_002">
+          <td style="font-weight:500">SalesHelper</td>
+          <td><span class="badge badge--active"><span class="badge__dot"></span>Active</span></td>
+          <td class="text-sm text-muted">saleshelper@axrail-agents.com</td>
+          <td class="timestamp timestamp--updated">Mar 13, 9:00 AM</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>

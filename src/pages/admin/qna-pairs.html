@@ -1,0 +1,92 @@
+<!-- ═══════════════════════════════════════════════════════════
+     ADMIN PORTAL — QnA Pairs Page
+     Chronological order with filters and project column.
+     Includes last-updated timestamp and refresh button.
+     Admin sees question-answer pairs only (no live/retro mode).
+     ═══════════════════════════════════════════════════════════ -->
+<div class="page" id="page-qna">
+  <div class="pg-hdr">
+    <div>
+      <h1>QnA Pairs</h1>
+      <p class="pg-sub">All question-answer pairs across sessions, sorted chronologically.</p>
+    </div>
+    <div class="pg-actions">
+      <button class="btn btn--sec" title="Refresh QnA data">⟳ Refresh</button>
+    </div>
+  </div>
+
+  <!-- Filter bar -->
+  <div class="filter-bar mb-4">
+    <div class="filter-bar__search">
+      <span>🔍</span>
+      <input type="text" placeholder="Search questions or answers...">
+    </div>
+    <select class="filter-select">
+      <option>All Projects</option>
+      <option>AXR — Axrail Cloud Migration</option>
+      <option>FIN — FinServ Sales Enablement</option>
+      <option>HLT — HealthTech Demo Calls</option>
+    </select>
+    <select class="filter-select">
+      <option>All Sessions</option>
+      <option>Q1 Architecture Review</option>
+      <option>Client Onboarding — Phase 2</option>
+      <option>FinServ Product Demo</option>
+      <option>Infrastructure Cost Review</option>
+    </select>
+    <select class="filter-select">
+      <option>Newest First</option>
+      <option>Oldest First</option>
+    </select>
+  </div>
+
+  <!-- QnA table with project column and last updated -->
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th style="width:35%">Question</th>
+          <th style="width:30%">Answer</th>
+          <th>Project</th>
+          <th>Session</th>
+          <th>Detected</th>
+          <th>Last Updated</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="text-sm" style="font-weight:500">What is the recommended VPC architecture for multi-AZ deployment?</td>
+          <td class="text-sm text-muted truncate" style="max-width:250px">For multi-AZ deployment, we recommend a 3-tier VPC with public, private, and data subnets across at least 2 AZs...</td>
+          <td><span class="project-tag">AXR</span></td>
+          <td class="text-sm">Q1 Architecture Review</td>
+          <td class="timestamp">Mar 16, 9:05 AM</td>
+          <td class="timestamp timestamp--updated">Mar 16, 9:05 AM</td>
+        </tr>
+        <tr>
+          <td class="text-sm" style="font-weight:500">How does the auto-scaling policy handle sudden traffic spikes?</td>
+          <td class="text-sm text-muted truncate" style="max-width:250px">The auto-scaling policy uses target tracking with a CPU utilization target of 65%. Step scaling kicks in at 80%...</td>
+          <td><span class="project-tag">AXR</span></td>
+          <td class="text-sm">Q1 Architecture Review</td>
+          <td class="timestamp">Mar 16, 9:12 AM</td>
+          <td class="timestamp timestamp--updated">Mar 16, 9:12 AM</td>
+        </tr>
+        <tr>
+          <td class="text-sm" style="font-weight:500">Is the system compliant with PCI DSS requirements?</td>
+          <td class="text-sm text-muted truncate" style="max-width:250px">Yes, the infrastructure is designed with PCI DSS Level 1 compliance in mind. All cardholder data is encrypted...</td>
+          <td><span class="project-tag">FIN</span></td>
+          <td class="text-sm">FinServ Product Demo</td>
+          <td class="timestamp">Mar 15, 2:22 PM</td>
+          <td class="timestamp timestamp--updated">Mar 15, 2:22 PM</td>
+        </tr>
+        <tr>
+          <td class="text-sm" style="font-weight:500">What is the estimated monthly cost for the proposed architecture?</td>
+          <td class="text-sm text-muted truncate" style="max-width:250px">Based on the sizing in our rate card, the estimated monthly cost is approximately $4,200 for the base infrastructure...</td>
+          <td><span class="project-tag">AXR</span></td>
+          <td class="text-sm">Cost Review</td>
+          <td class="timestamp">Mar 14, 10:35 AM</td>
+          <td class="timestamp timestamp--updated">Mar 14, 10:35 AM</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>

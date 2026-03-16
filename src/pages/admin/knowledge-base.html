@@ -1,0 +1,145 @@
+<!-- ═══════════════════════════════════════════════════════════
+     ADMIN PORTAL — Knowledge Base Page
+     Single OpenSearch backend, differentiated by project prefix/tags.
+     Each project has its own folder/section with tag prefix.
+     Admin can assign KB collections to agents.
+     ═══════════════════════════════════════════════════════════ -->
+<div class="page" id="page-knowledge-base">
+  <div class="pg-hdr">
+    <div>
+      <h1>Knowledge Base</h1>
+      <p class="pg-sub">Manage documents organized by project. Backed by a unified OpenSearch index with project prefix tags.</p>
+    </div>
+    <div class="pg-actions">
+      <button class="btn btn--sec">Manage Project Tags</button>
+      <button class="btn btn--pri">+ Upload Document</button>
+    </div>
+  </div>
+
+  <!-- Filter bar -->
+  <div class="filter-bar mb-4">
+    <div class="filter-bar__search">
+      <span>🔍</span>
+      <input type="text" placeholder="Search documents...">
+    </div>
+    <select class="filter-select">
+      <option>All Projects</option>
+      <option>AXR — Axrail Cloud Migration</option>
+      <option>FIN — FinServ Sales Enablement</option>
+      <option>HLT — HealthTech Demo Calls</option>
+    </select>
+    <select class="filter-select">
+      <option>All Types</option>
+      <option>PDF</option>
+      <option>DOCX</option>
+      <option>TXT</option>
+    </select>
+  </div>
+
+  <!-- Project: AXR -->
+  <div class="card mb-6">
+    <div class="card__header">
+      <div class="d-flex items-center gap-3">
+        <span class="project-tag">AXR</span>
+        <h3>Axrail Cloud Migration</h3>
+        <span class="text-xs text-muted">3 documents</span>
+      </div>
+      <button class="btn btn--ghost btn--sm">+ Upload to AXR</button>
+    </div>
+    <div class="card__body">
+      <div class="d-flex flex-col gap-3">
+        <div class="doc-item">
+          <div class="doc-item__icon">📄</div>
+          <div class="doc-item__info">
+            <div class="doc-item__name">Cloud Migration Playbook v3.2.pdf</div>
+            <div class="doc-item__meta">2.4 MB · PDF · Uploaded Feb 12 by Richie Halim <span class="doc-item__tag">AXR</span></div>
+          </div>
+          <div class="d-flex gap-2">
+            <span class="text-xs text-muted">Assigned to: TechBot Alpha, SalesHelper</span>
+            <button class="btn btn--ghost btn--sm">⋮</button>
+          </div>
+        </div>
+        <div class="doc-item">
+          <div class="doc-item__icon">📄</div>
+          <div class="doc-item__info">
+            <div class="doc-item__name">AWS Architecture Best Practices.docx</div>
+            <div class="doc-item__meta">1.1 MB · DOCX · Uploaded Feb 14 by Richie Halim <span class="doc-item__tag">AXR</span></div>
+          </div>
+          <div class="d-flex gap-2">
+            <span class="text-xs text-muted">Assigned to: TechBot Alpha</span>
+            <button class="btn btn--ghost btn--sm">⋮</button>
+          </div>
+        </div>
+        <div class="doc-item">
+          <div class="doc-item__icon">📄</div>
+          <div class="doc-item__info">
+            <div class="doc-item__name">Rate Card — Enterprise Tier.pdf</div>
+            <div class="doc-item__meta">310 KB · PDF · Uploaded Feb 20 by Richie Halim <span class="doc-item__tag">AXR</span></div>
+          </div>
+          <div class="d-flex gap-2">
+            <span class="text-xs text-muted">Not assigned</span>
+            <button class="btn btn--ghost btn--sm">⋮</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Project: FIN -->
+  <div class="card mb-6">
+    <div class="card__header">
+      <div class="d-flex items-center gap-3">
+        <span class="project-tag">FIN</span>
+        <h3>FinServ Sales Enablement</h3>
+        <span class="text-xs text-muted">2 documents</span>
+      </div>
+      <button class="btn btn--ghost btn--sm">+ Upload to FIN</button>
+    </div>
+    <div class="card__body">
+      <div class="d-flex flex-col gap-3">
+        <div class="doc-item">
+          <div class="doc-item__icon">📄</div>
+          <div class="doc-item__info">
+            <div class="doc-item__name">FinServ Compliance Checklist.pdf</div>
+            <div class="doc-item__meta">890 KB · PDF · Uploaded Mar 1 by Richie Halim <span class="doc-item__tag">FIN</span></div>
+          </div>
+          <div class="d-flex gap-2">
+            <span class="text-xs text-muted">Assigned to: FinBot</span>
+            <button class="btn btn--ghost btn--sm">⋮</button>
+          </div>
+        </div>
+        <div class="doc-item">
+          <div class="doc-item__icon">📄</div>
+          <div class="doc-item__info">
+            <div class="doc-item__name">Product Feature Matrix Q1-2026.txt</div>
+            <div class="doc-item__meta">45 KB · TXT · Uploaded Mar 2 by Richie Halim <span class="doc-item__tag">FIN</span></div>
+          </div>
+          <div class="d-flex gap-2">
+            <span class="text-xs text-muted">Not assigned</span>
+            <button class="btn btn--ghost btn--sm">⋮</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Project: HLT (empty) -->
+  <div class="card">
+    <div class="card__header">
+      <div class="d-flex items-center gap-3">
+        <span class="project-tag">HLT</span>
+        <h3>HealthTech Demo Calls</h3>
+        <span class="text-xs text-muted">0 documents</span>
+      </div>
+      <button class="btn btn--ghost btn--sm">+ Upload to HLT</button>
+    </div>
+    <div class="card__body">
+      <div class="empty-state">
+        <div class="empty-state__icon">📂</div>
+        <div class="empty-state__title">No documents yet</div>
+        <div class="empty-state__desc">Upload documents to this project's knowledge base so agents can reference them during meetings.</div>
+        <button class="btn btn--pri">Upload Document</button>
+      </div>
+    </div>
+  </div>
+</div>

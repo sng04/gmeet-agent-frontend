@@ -1,0 +1,186 @@
+<!-- ═══════════════════════════════════════════════════════════
+     USER PORTAL — Active Session Page
+     Features:
+     - Live/Retro toggle per session
+     - Connection indicator showing latency quality (good/fair/poor)
+     - LIVE: real-time transcript + QnA pairs (speech-to-text only, no chat)
+     - RETRO: tabs (Summary, QnA Pairs, Transcript) + AI Chat sidebar on right
+     - Complete meeting metadata
+     ═══════════════════════════════════════════════════════════ -->
+<div class="page" id="page-user-session">
+
+  <!-- Breadcrumb -->
+  <div class="breadcrumb">
+    <a href="#" data-nav="user-sessions">Sessions</a>
+    <span class="breadcrumb__sep">›</span>
+    <span class="breadcrumb__current">Infrastructure Cost Review</span>
+  </div>
+
+  <!-- Page header with mode toggle and connection indicator -->
+  <div class="pg-hdr">
+    <div>
+      <h1>Infrastructure Cost Review</h1>
+      <p class="pg-sub">
+        <span class="project-tag">AXR</span>
+        <span class="text-muted" style="margin-left:8px">TechBot Alpha</span>
+      </p>
+    </div>
+    <div class="pg-actions">
+      <!-- Connection indicator with latency quality -->
+      <div class="conn-indicator badge--conn-good" style="background:var(--conn-good-bg);color:var(--conn-good-text)">
+        <div class="conn-indicator__bars">
+          <span class="conn-indicator__bar" style="height:4px"></span>
+          <span class="conn-indicator__bar" style="height:7px"></span>
+          <span class="conn-indicator__bar" style="height:10px"></span>
+          <span class="conn-indicator__bar" style="height:12px"></span>
+        </div>
+        Good · 88ms
+      </div>
+
+      <!-- Live / Retro toggle -->
+      <div class="mode-toggle">
+        <button class="mode-toggle__btn mode-toggle__btn--live">🔴 Live</button>
+        <button class="mode-toggle__btn active">📋 Retro</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════ RETRO MODE (shown) ═══════ -->
+  <div class="d-flex gap-6" style="align-items:flex-start" id="retro-view">
+
+    <!-- Left: Main content area with tabs -->
+    <div style="flex:1;min-width:0">
+
+      <!-- Meeting metadata card -->
+      <div class="card mb-4">
+        <div class="card__body">
+          <div class="d-grid g3 gap-4">
+            <div>
+              <div class="text-xs text-muted mb-1">Duration</div>
+              <div class="font-semibold">1h 05m</div>
+            </div>
+            <div>
+              <div class="text-xs text-muted mb-1">Participants</div>
+              <div class="font-semibold">6</div>
+            </div>
+            <div>
+              <div class="text-xs text-muted mb-1">Performance Score</div>
+              <div class="font-semibold">7.5 / 10</div>
+            </div>
+            <div>
+              <div class="text-xs text-muted mb-1">Total Questions</div>
+              <div class="font-semibold">12</div>
+            </div>
+            <div>
+              <div class="text-xs text-muted mb-1">Agent Responses</div>
+              <div class="font-semibold">12</div>
+            </div>
+            <div>
+              <div class="text-xs text-muted mb-1">Date</div>
+              <div class="font-semibold">Mar 14, 2026</div>
+            </div>
+            <div>
+              <div class="text-xs text-muted mb-1">Project</div>
+              <div class="font-semibold">Axrail Cloud Migration</div>
+            </div>
+            <div>
+              <div class="text-xs text-muted mb-1">Agent</div>
+              <div class="font-semibold">TechBot Alpha</div>
+            </div>
+            <div>
+              <div class="text-xs text-muted mb-1">Participants List</div>
+              <div class="text-sm">Sarah Chen, James Park, Lisa Wang, David Lee, Mike Torres, TechBot Alpha</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tabs: Summary | QnA Pairs | Transcript -->
+      <div class="tabs">
+        <div class="tab active">Summary</div>
+        <div class="tab">QnA Pairs</div>
+        <div class="tab">Transcript</div>
+      </div>
+
+      <!-- Tab content: Summary -->
+      <div class="card">
+        <div class="card__body">
+          <h4 class="mb-3">Meeting Summary</h4>
+          <p class="text-sm" style="line-height:1.75;color:var(--gray-700)">
+            The team reviewed Q1 infrastructure costs and identified a VPC optimization opportunity. Auto-scaling policies are working but need tuning for the new traffic pattern.
+          </p>
+
+          <h4 class="mt-6 mb-3">Key Decisions</h4>
+          <div class="d-flex flex-col gap-2">
+            <div class="d-flex items-center gap-2 text-sm"><span style="color:var(--ok-500)">✓</span> Adopt reserved instances for baseline EC2 capacity</div>
+            <div class="d-flex items-center gap-2 text-sm"><span style="color:var(--ok-500)">✓</span> Implement Savings Plans for Fargate workloads</div>
+            <div class="d-flex items-center gap-2 text-sm"><span style="color:var(--ok-500)">✓</span> Schedule next cost review for April 7</div>
+          </div>
+
+          <h4 class="mt-6 mb-3">Action Items</h4>
+          <div class="d-flex flex-col gap-2">
+            <div class="d-flex items-center gap-2 text-sm">1. James to prepare RI purchase proposal by March 21</div>
+            <div class="d-flex items-center gap-2 text-sm">2. Sarah to update the rate card with new pricing</div>
+            <div class="d-flex items-center gap-2 text-sm">3. TechBot configs to be updated with latest cost data</div>
+          </div>
+
+          <h4 class="mt-6 mb-3" style="color:var(--warn-600)">Areas for Improvement</h4>
+          <div class="d-flex flex-col gap-2">
+            <div class="text-sm" style="color:var(--gray-600)">• Sarah could have probed deeper on the ECS Fargate vs. EC2 cost tradeoff.</div>
+            <div class="text-sm" style="color:var(--gray-600)">• The team missed discussing data transfer costs which are 12% of the total bill.</div>
+            <div class="text-sm" style="color:var(--gray-600)">• Consider bringing up the Savings Plans earlier in the meeting.</div>
+          </div>
+
+          <h4 class="mt-6 mb-3" style="color:var(--err-600)">Missed Agenda Items</h4>
+          <div class="d-flex flex-col gap-2">
+            <div class="text-sm" style="color:var(--gray-600)">• Data transfer cost optimization</div>
+            <div class="text-sm" style="color:var(--gray-600)">• CloudFront caching strategy review</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: AI Chat sidebar (always visible in retro, NOT a tab) -->
+    <div class="right-panel" style="width:360px;flex-shrink:0;height:calc(100vh - var(--topbar-h) - 80px);position:sticky;top:24px;border-radius:var(--r-lg);border:var(--bw-thin) solid var(--bc-default)">
+      <div class="right-panel__header">
+        <span>💬 AI Chat</span>
+        <button class="btn btn--ghost btn--sm">Clear</button>
+      </div>
+      <div class="right-panel__body">
+        <div class="chat">
+          <div class="chat-bubble chat-bubble--ai">
+            Hi! I can answer questions about this meeting's transcript, summary, and QnA pairs. What would you like to know?
+          </div>
+          <div class="chat-bubble chat-bubble--user">
+            What were the main cost concerns raised?
+          </div>
+          <div class="chat-bubble chat-bubble--ai">
+            Based on the transcript, the primary concern was the 18% increase in EC2 spend this month. James Park highlighted this at 10:01. The team discussed scaling policies and monthly cost estimates (~$4,200 base to $6,800 peak). Data transfer costs (12% of the bill) were identified as a missed discussion point.
+          </div>
+          <div class="chat-bubble chat-bubble--user">
+            Did anyone mention reserved instances?
+          </div>
+          <div class="chat-bubble chat-bubble--ai">
+            Yes, the team agreed to adopt reserved instances for baseline EC2 capacity as one of the key decisions. James was assigned to prepare an RI purchase proposal by March 21.
+          </div>
+        </div>
+      </div>
+      <div class="right-panel__footer">
+        <div class="chat-input">
+          <input type="text" placeholder="Ask about this meeting...">
+          <button class="btn btn--pri btn--sm">Send</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════ LIVE MODE (hidden by default, toggled via JS) ═══════ -->
+  <!-- 
+  <div id="live-view" style="display:none">
+    Live mode: speech-to-text only, no chat input.
+    Shows real-time transcript stream and detected QnA pairs.
+    Connection indicator shows latency.
+    Auto-scroll to latest content.
+  </div>
+  -->
+</div>
