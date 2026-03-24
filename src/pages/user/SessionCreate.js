@@ -1,0 +1,69 @@
+import { Button } from '../../components/ui/Button.js';
+import { navigate } from '../../router.js';
+
+export default function SessionCreatePage() {
+  const el = document.createElement('div');
+  el.className = 'page';
+
+  el.innerHTML = `
+    <div class="bc">
+      <a href="#" id="back-link">Acme Corp Sales</a>
+      <span class="sep">›</span>
+      <span class="cur">New Session</span>
+    </div>
+    <div class="pg-hdr">
+      <div>
+        <h1>Start New Session</h1>
+        <div class="pg-sub">Project: <strong>Acme Corp Sales</strong> · Agent: <strong>TechSales Bot</strong></div>
+      </div>
+    </div>
+    <div class="card" style="max-width:600px">
+      <div class="card-body">
+        <div class="form-g">
+          <label class="form-l">Meeting Purpose *</label>
+          <input class="form-i" name="purpose" placeholder="e.g. Q3 Technical Architecture Review">
+          <div class="form-h">Describes the meeting objective. Helps with retrospective analysis.</div>
+        </div>
+        <div class="form-g">
+          <label class="form-l">Google Meet Link *</label>
+          <input class="form-i" name="meetLink" placeholder="https://meet.google.com/xxx-xxxx-xxx">
+          <div class="form-h">Paste the Google Meet link for this session. The agent will join using its assigned Gmail account.</div>
+        </div>
+        <div class="form-g">
+          <label class="form-l">Assistant Style</label>
+          <select class="form-sel" name="style">
+            <option>Default (use project agent settings)</option>
+            <option>Concise — short, direct answers</option>
+            <option>Detailed — comprehensive explanations</option>
+            <option>Friendly — warm, approachable tone</option>
+          </select>
+          <div class="form-h">Optional override for this session only.</div>
+        </div>
+        <div class="flex gap-3 mt-6" id="form-actions"></div>
+        <div class="card mt-6" style="background:var(--gray-25);border-color:var(--gray-100)">
+          <div class="card-body" style="padding:16px">
+            <div class="text-sm fw-m text-p mb-4">How it works</div>
+            <div class="text-sm text-t" style="line-height:1.7">
+              1. Paste your Google Meet link above<br>
+              2. Agent joins the meeting using its assigned Gmail account<br>
+              3. Audio is captured and transcribed in real-time<br>
+              4. Client questions are detected → answers from knowledge base<br>
+              5. Review retrospective analysis after session ends
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  el.querySelector('#back-link').addEventListener('click', (e) => {
+    e.preventDefault();
+    navigate('project-detail');
+  });
+
+  const actions = el.querySelector('#form-actions');
+  actions.appendChild(Button({ text: 'Start Session →', variant: 'p', size: 'lg', onClick: () => navigate('live-session') }));
+  actions.appendChild(Button({ text: 'Cancel', variant: 's', size: 'lg', onClick: () => navigate('project-detail') }));
+
+  return el;
+}

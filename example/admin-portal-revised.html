@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MeetAgent — Admin Portal</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --white:#FFFFFF;--gray-25:#FCFCFD;--gray-50:#F9FAFB;--gray-100:#F2F4F7;--gray-200:#EAECF0;
+  --gray-300:#D0D5DD;--gray-400:#98A2B3;--gray-500:#667085;--gray-600:#475467;--gray-700:#344054;
+  --gray-800:#1D2939;--gray-900:#101828;
+  --pri-25:#F0F6FF;--pri-50:#E0EDFF;--pri-100:#C2DBFF;--pri-200:#94C0FF;--pri-300:#5C9EFF;
+  --pri-400:#3B82F6;--pri-500:#2563EB;--pri-600:#1D4ED8;--pri-700:#1E40AF;
+  --ok-50:#ECFDF5;--ok-100:#D1FAE5;--ok-500:#10B981;--ok-600:#059669;--ok-700:#047857;
+  --warn-50:#FFFBEB;--warn-100:#FEF3C7;--warn-500:#F59E0B;--warn-600:#D97706;--warn-700:#B45309;
+  --err-50:#FEF2F2;--err-100:#FEE2E2;--err-500:#EF4444;--err-600:#DC2626;--err-700:#B91C1C;
+  --info-50:#ECFEFF;--info-100:#CFFAFE;--info-500:#06B6D4;--info-600:#0891B2;
+  --font:'Outfit',sans-serif;--mono:'DM Mono',monospace;
+  --sidebar-w:248px;--topbar-h:56px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;overflow:hidden}
+body{font-family:var(--font);font-size:14px;color:var(--gray-900);background:var(--gray-50);-webkit-font-smoothing:antialiased}
+::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--gray-300);border-radius:99px}
+::selection{background:var(--pri-100);color:var(--pri-700)}
+a{color:var(--pri-500);text-decoration:none}
+code{font-family:var(--mono);font-size:.85em;background:var(--gray-100);padding:1px 5px;border-radius:4px;color:var(--pri-700)}
+#app{display:flex;flex-direction:column;height:100vh}
+.topbar{height:var(--topbar-h);background:var(--white);border-bottom:1px solid var(--gray-200);display:flex;align-items:center;padding:0 20px;gap:16px;flex-shrink:0;z-index:20}
+.logo{display:flex;align-items:center;gap:8px;font-weight:800;font-size:16px;letter-spacing:-.3px}
+.logo-icon{width:30px;height:30px;background:var(--pri-500);border-radius:6px;display:grid;place-items:center;color:#fff;font-size:13px;font-weight:700}
+.logo .acc{color:var(--pri-400)}
+.portal-badge{font-family:var(--mono);font-size:10px;letter-spacing:1px;text-transform:uppercase;padding:2px 8px;border-radius:4px;background:var(--pri-25);color:var(--pri-600);border:1px solid var(--pri-100)}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:12px}
+.avatar{width:32px;height:32px;background:linear-gradient(135deg,var(--pri-400),var(--pri-600));border-radius:50%;display:grid;place-items:center;color:#fff;font-size:11px;font-weight:700;cursor:pointer}
+.layout{display:flex;flex:1;overflow:hidden}
+.sidebar{width:var(--sidebar-w);background:var(--white);border-right:1px solid var(--gray-200);display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto}
+.nav-group{padding:16px 12px 8px}
+.nav-label{font-family:var(--mono);font-size:10px;font-weight:500;color:var(--gray-500);letter-spacing:1.5px;text-transform:uppercase;padding:0 12px;margin-bottom:4px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:8px 12px;margin:1px 8px;border-radius:8px;font-size:13px;color:var(--gray-600);cursor:pointer;transition:all .12s;user-select:none;border:1px solid transparent}
+.nav-item:hover{background:var(--gray-100);color:var(--gray-900)}
+.nav-item.active{background:var(--pri-25);color:var(--pri-600);border-color:var(--pri-100);font-weight:500}
+.nav-icon{font-size:15px;width:20px;text-align:center}
+.nav-badge{margin-left:auto;font-family:var(--mono);font-size:10px;padding:1px 6px;border-radius:99px;background:var(--pri-500);color:#fff}
+.sidebar-footer{margin-top:auto;padding:12px;border-top:1px solid var(--gray-100)}
+.user-card{display:flex;align-items:center;gap:10px;padding:10px;background:var(--gray-25);border-radius:8px;border:1px solid var(--gray-100)}
+.user-card .name{font-size:13px;font-weight:600}
+.user-card .role{font-size:10px;color:var(--gray-500);font-family:var(--mono)}
+.main{flex:1;overflow-y:auto;background:var(--gray-50)}
+.page{display:none;padding:24px;min-height:100%;animation:pageIn .2s ease}
+.page.active{display:block}
+@keyframes pageIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+.pg-hdr{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:24px}
+.pg-hdr h1{font-size:24px;font-weight:800;letter-spacing:-.4px}
+.pg-sub{font-size:13px;color:var(--gray-500);margin-top:4px}
+.pg-actions{display:flex;gap:12px;align-items:center}
+.g{display:grid;gap:16px}.g2{grid-template-columns:repeat(2,1fr)}.g3{grid-template-columns:repeat(3,1fr)}.g4{grid-template-columns:repeat(4,1fr)}.g5{grid-template-columns:repeat(5,1fr)}
+.stat{background:var(--white);border:1px solid var(--gray-200);border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:6px;cursor:pointer;transition:all .15s}
+.stat:hover{border-color:var(--pri-300);box-shadow:0 4px 8px -2px rgba(16,24,40,.06)}
+.stat-icon{width:40px;height:40px;border-radius:8px;display:grid;place-items:center;font-size:18px;margin-bottom:4px}
+.stat-icon.blue{background:var(--pri-50);color:var(--pri-400)}.stat-icon.green{background:var(--ok-50);color:var(--ok-500)}
+.stat-icon.amber{background:var(--warn-50);color:var(--warn-500)}.stat-icon.cyan{background:var(--info-50);color:var(--info-500)}
+.stat-icon.red{background:var(--err-50);color:var(--err-500)}
+.stat-label{font-size:13px;color:var(--gray-500);font-weight:500}
+.stat-val{font-size:24px;font-weight:800;letter-spacing:-.5px}
+.stat-meta{font-size:11px;color:var(--gray-500);font-family:var(--mono)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;border:1px solid transparent;cursor:pointer;font-family:var(--font);transition:all .12s;white-space:nowrap}
+.btn-p{background:var(--pri-500);color:#fff}.btn-p:hover{background:var(--pri-600)}
+.btn-s{background:var(--white);color:var(--gray-900);border-color:var(--gray-200)}.btn-s:hover{background:var(--gray-100);border-color:var(--gray-300)}
+.btn-g{background:none;color:var(--gray-500)}.btn-g:hover{background:var(--gray-100);color:var(--gray-900)}
+.btn-d{background:var(--err-50);color:var(--err-600);border-color:var(--err-100)}.btn-d:hover{background:var(--err-100)}
+.btn-ok{background:var(--ok-50);color:var(--ok-700);border-color:var(--ok-100)}.btn-ok:hover{background:var(--ok-100)}
+.btn-warn{background:var(--warn-50);color:var(--warn-700);border-color:var(--warn-100)}.btn-warn:hover{background:var(--warn-100)}
+.btn-sm{padding:4px 12px;font-size:12px;border-radius:6px}
+.btn-lg{padding:12px 24px;font-size:14px;border-radius:10px}
+.tbl-wrap{background:var(--white);border:1px solid var(--gray-200);border-radius:12px;overflow:hidden}
+.tbl-hdr{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--gray-100)}
+.tbl-title{font-size:16px;font-weight:600}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;font-size:11px;font-weight:500;color:var(--gray-500);text-transform:uppercase;letter-spacing:.05em;padding:12px 20px;border-bottom:1px solid var(--gray-100);background:var(--gray-25)}
+td{padding:12px 20px;font-size:13px;color:var(--gray-600);border-bottom:1px solid var(--gray-100);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--gray-25)}
+.tbl-foot{display:flex;align-items:center;justify-content:space-between;padding:12px 20px;border-top:1px solid var(--gray-100);font-size:11px;color:var(--gray-500)}
+.badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:500;padding:2px 8px;border-radius:99px;white-space:nowrap}
+.dot{width:6px;height:6px;border-radius:99px;background:currentColor;flex-shrink:0}
+.b-ok{background:var(--ok-50);color:var(--ok-700)}.b-warn{background:var(--warn-50);color:var(--warn-700)}
+.b-err{background:var(--err-50);color:var(--err-700)}.b-info{background:var(--info-50);color:var(--info-600)}
+.b-gray{background:var(--gray-100);color:var(--gray-600)}.b-pri{background:var(--pri-50);color:var(--pri-700)}
+.b-ongoing{background:var(--pri-50);color:var(--pri-600)}.b-summary{background:var(--ok-50);color:var(--ok-700)}
+.b-ended{background:var(--gray-100);color:var(--gray-700)}.b-live{background:var(--err-500);color:#fff}
+.b-live .dot{background:#fff}
+.b-indexed{background:var(--ok-50);color:var(--ok-700)}.b-extracting{background:var(--info-50);color:var(--info-600)}
+.b-embedding{background:var(--warn-50);color:var(--warn-600)}.b-uploaded{background:var(--gray-100);color:var(--gray-600)}
+.filters{display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap}
+.search-box{position:relative;flex:1;min-width:200px;max-width:320px}
+.search-box input{width:100%;padding:8px 12px 8px 36px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;background:var(--white);font-family:var(--font)}
+.search-box input:focus{outline:none;border-color:var(--pri-400);box-shadow:0 0 0 4px rgba(59,130,246,.12)}
+.search-box .si{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--gray-400);font-size:13px;pointer-events:none}
+.fsel{padding:8px 32px 8px 12px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;color:var(--gray-600);background:var(--white);font-family:var(--font);appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23667085' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center}
+.card{background:var(--white);border:1px solid var(--gray-200);border-radius:12px;overflow:hidden}
+.card-hdr{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--gray-100)}
+.card-body{padding:20px}
+.card-foot{padding:12px 20px;border-top:1px solid var(--gray-100);background:var(--gray-25)}
+.qa{background:var(--white);border:1px solid var(--gray-200);border-radius:12px;padding:20px;margin-bottom:16px}
+.qa-q{display:flex;gap:12px;margin-bottom:16px}
+.qi{width:28px;height:28px;background:var(--warn-50);color:var(--warn-600);border-radius:6px;display:grid;place-items:center;font-size:11px;font-weight:700;flex-shrink:0}
+.ai{width:28px;height:28px;background:var(--pri-50);color:var(--pri-600);border-radius:6px;display:grid;place-items:center;font-size:11px;font-weight:700;flex-shrink:0}
+.qa-a{display:flex;gap:12px}
+.qa-txt{font-size:13px;line-height:1.6;flex:1}
+.qa-txt.q{font-weight:500;color:var(--gray-900)}
+.qa-refresh{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border:1px solid var(--gray-200);border-radius:99px;font-size:11px;color:var(--gray-500);cursor:pointer;font-family:var(--font);background:none;margin-left:8px}
+.qa-refresh:hover{background:var(--gray-100)}
+.form-g{margin-bottom:20px}
+.form-l{display:block;font-size:13px;font-weight:500;margin-bottom:8px}
+.form-l .req{color:var(--err-500)}
+.form-i,.form-sel,.form-ta{width:100%;padding:8px 12px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;font-family:var(--font);background:var(--white)}
+.form-i:focus,.form-ta:focus,.form-sel:focus{outline:none;border-color:var(--pri-400);box-shadow:0 0 0 4px rgba(59,130,246,.12)}
+.form-h{font-size:11px;color:var(--gray-500);margin-top:4px}
+.form-ta{min-height:100px;resize:vertical}
+.form-sel{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23667085' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:36px}
+.form-pwd-wrap{position:relative}
+.form-pwd-wrap .form-i{padding-right:44px}
+.pwd-toggle{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--gray-400);font-size:13px}
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--gray-25);border:1px solid var(--gray-200);border-radius:8px;margin-bottom:20px}
+.toggle-info .tl{font-size:13px;font-weight:500}
+.toggle-info .ts{font-size:11px;color:var(--gray-500);margin-top:2px}
+.toggle{position:relative;width:40px;height:22px;flex-shrink:0}
+.toggle input{opacity:0;width:0;height:0}
+.toggle-slider{position:absolute;inset:0;border-radius:99px;background:var(--gray-200);cursor:pointer;transition:.2s}
+.toggle-slider::before{content:'';position:absolute;width:16px;height:16px;left:3px;top:3px;border-radius:50%;background:#fff;transition:.2s;box-shadow:0 1px 3px rgba(16,24,40,.2)}
+.toggle input:checked + .toggle-slider{background:var(--ok-500)}
+.toggle input:checked + .toggle-slider::before{transform:translateX(18px)}
+.bc{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--gray-500);margin-bottom:16px}
+.bc a{color:var(--gray-500)}.bc a:hover{color:var(--gray-900)}.bc .sep{color:var(--gray-300)}.bc .cur{color:var(--gray-900);font-weight:500}
+.tabs{display:flex;gap:0;border-bottom:1px solid var(--gray-200);margin-bottom:24px}
+.tab{padding:12px 20px;font-size:13px;font-weight:500;color:var(--gray-500);cursor:pointer;border-bottom:2px solid transparent;transition:all .12s;user-select:none}
+.tab:hover{color:var(--gray-900)}.tab.active{color:var(--pri-600);border-bottom-color:var(--pri-500)}
+.tab-c{display:none}.tab-c.active{display:block}
+.upload-zone{border:2px dashed var(--gray-200);border-radius:12px;padding:40px 24px;text-align:center;cursor:pointer;transition:all .2s;margin-bottom:24px}
+.upload-zone:hover{border-color:var(--pri-400);background:var(--pri-25)}
+.doc-icon{width:40px;height:40px;border-radius:8px;display:grid;place-items:center;font-size:18px;flex-shrink:0}
+.doc-icon.pdf{background:var(--err-50);color:var(--err-500)}
+.doc-icon.docx{background:var(--pri-50);color:var(--pri-400)}
+.doc-icon.txt{background:var(--gray-100);color:var(--gray-600)}
+.tchart{display:flex;align-items:flex-end;gap:16px;height:200px;padding-top:24px}
+.tchart-g{flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;position:relative}
+.tchart-bar{width:100%;max-width:48px;background:var(--pri-400);border-radius:4px 4px 0 0;transition:background .12s;min-height:4px}
+.tchart-g:hover .tchart-bar{background:var(--pri-600)}
+.tchart-lbl{font-size:10px;color:var(--gray-500);font-family:var(--mono)}
+.tchart-tip{font-size:10px;font-family:var(--mono);color:var(--gray-500);opacity:0;transition:opacity .12s}
+.tchart-g:hover .tchart-tip{opacity:1}
+.agent-detail-hdr{display:flex;align-items:flex-start;gap:20px;margin-bottom:24px;padding:24px;background:var(--white);border:1px solid var(--gray-200);border-radius:12px}
+.agent-avatar{width:56px;height:56px;background:var(--pri-50);border-radius:12px;display:grid;place-items:center;font-size:28px;flex-shrink:0}
+.chat-test-panel{background:var(--gray-50);border:1px solid var(--gray-200);border-radius:12px;overflow:hidden}
+.chat-test-msgs{height:280px;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px}
+.chat-test-item{max-width:85%;font-size:13px;line-height:1.5}
+.chat-test-item.user{align-self:flex-end;background:var(--pri-500);color:#fff;padding:10px 14px;border-radius:12px 12px 2px 12px}
+.chat-test-item.ai{align-self:flex-start;background:var(--white);border:1px solid var(--gray-200);color:var(--gray-800);padding:10px 14px;border-radius:12px 12px 12px 2px}
+.chat-test-item .agent-lbl{font-size:10px;font-weight:600;color:var(--gray-500);text-transform:uppercase;margin-bottom:4px;font-family:var(--mono)}
+.chat-test-input{display:flex;gap:8px;padding:12px 16px;border-top:1px solid var(--gray-200);background:var(--white)}
+.chat-test-input input{flex:1;padding:8px 12px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;font-family:var(--font)}
+.chat-test-input input:focus{outline:none;border-color:var(--pri-400)}
+.chat-test-input button{padding:8px 16px;background:var(--pri-500);color:#fff;border:none;border-radius:8px;cursor:pointer;font-family:var(--font);font-weight:600;font-size:13px}
+.kb-folder{background:var(--white);border:1px solid var(--gray-200);border-radius:12px;overflow:hidden;margin-bottom:20px}
+.kb-folder-hdr{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;background:var(--gray-25);border-bottom:1px solid var(--gray-200);cursor:pointer}
+.kb-folder-hdr:hover{background:var(--gray-50)}
+.kb-folder-tag{font-family:var(--mono);font-size:11px;background:var(--pri-50);color:var(--pri-700);padding:2px 8px;border-radius:4px;border:1px solid var(--pri-100)}
+.agent-list-card{background:var(--white);border:1px solid var(--gray-200);border-radius:12px;overflow:hidden;margin-bottom:16px;cursor:pointer;transition:all .15s}
+.agent-list-card:hover{border-color:var(--pri-300);box-shadow:0 2px 6px rgba(16,24,40,.06)}
+.agent-list-row{display:flex;align-items:center;gap:16px;padding:16px 20px}
+.mb-4{margin-bottom:16px}.mb-5{margin-bottom:20px}.mb-6{margin-bottom:24px}.mt-1{margin-top:4px}.mt-2{margin-top:8px}.mt-4{margin-top:16px}.mt-6{margin-top:24px}
+.flex{display:flex}.items-c{align-items:center}.items-s{align-items:flex-start}.jc-b{justify-content:space-between}.jc-end{justify-content:flex-end}.gap-2{gap:8px}.gap-3{gap:12px}.gap-4{gap:16px}
+.text-xs{font-size:11px}.text-sm{font-size:13px}.text-md{font-size:16px}
+.text-t{color:var(--gray-500)}.text-p{color:var(--gray-900)}.text-pri{color:var(--pri-500)}
+.mono{font-family:var(--mono)}.fw-m{font-weight:500}.fw-sb{font-weight:600}.fw-b{font-weight:700}
+.truncate{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.divider{height:1px;background:var(--gray-100);margin:20px 0}
+</style>
+</head>
+<body>
+<div id="app">
+<header class="topbar">
+  <div class="logo"><div class="logo-icon">M</div>Meet<span class="acc">Agent</span></div>
+  <span class="portal-badge">Admin Portal</span>
+  <div class="topbar-right"><div class="avatar">RT</div></div>
+</header>
+
+<div class="layout">
+<nav class="sidebar">
+  <div class="nav-group">
+    <div class="nav-label">Overview</div>
+    <div class="nav-item active" data-page="dashboard"><span class="nav-icon">📊</span>Dashboard</div>
+  </div>
+  <div class="nav-group">
+    <div class="nav-label">Management</div>
+    <div class="nav-item" data-page="projects"><span class="nav-icon">📁</span>Projects<span class="nav-badge">3</span></div>
+    <div class="nav-item" data-page="agents"><span class="nav-icon">🤖</span>Agents<span class="nav-badge">3</span></div>
+    <div class="nav-item" data-page="skills"><span class="nav-icon">⚡</span>Skills</div>
+    <div class="nav-item" data-page="gmail"><span class="nav-icon">📧</span>Gmail Credentials</div>
+  </div>
+  <div class="nav-group">
+    <div class="nav-label">Monitoring</div>
+    <div class="nav-item" data-page="qa"><span class="nav-icon">💬</span>Q&A Monitor</div>
+    <div class="nav-item" data-page="tokens"><span class="nav-icon">🪙</span>Token Usage</div>
+    <div class="nav-item" data-page="logs"><span class="nav-icon">📋</span>Audit Logs</div>
+  </div>
+  <div class="sidebar-footer">
+    <div class="user-card"><div class="avatar">RT</div><div><div class="name">Richie Tan</div><div class="role">Administrator</div></div></div>
+  </div>
+</nav>
+
+<main class="main">
+
+<!-- DASHBOARD -->
+<div class="page active" id="p-dashboard">
+  <div class="pg-hdr"><div><h1>Dashboard</h1><div class="pg-sub">Overview of your GMeet Agent system</div></div></div>
+  <div class="g g4 mb-6">
+    <div class="stat" onclick="nav('qa')" style="border-color:var(--err-500)">
+      <div class="stat-icon red">📊</div>
+      <div class="flex items-c gap-2">
+        <div class="stat-label">Active Sessions</div>
+        <span class="badge b-live" style="font-size:10px"><span class="dot"></span> Live</span>
+      </div>
+      <div class="stat-val">1</div>
+      <div class="stat-meta">4 total sessions · Click to view →</div>
+    </div>
+    <div class="stat" onclick="nav('agents')"><div class="stat-icon green">🤖</div><div class="stat-label">Active Agents</div><div class="stat-val">2</div><div class="stat-meta">3 total agents</div></div>
+    <div class="stat" onclick="nav('projects')"><div class="stat-icon amber">📁</div><div class="stat-label">Projects</div><div class="stat-val">3</div><div class="stat-meta">14 assigned users</div></div>
+    <div class="stat" onclick="nav('qa')"><div class="stat-icon cyan">💬</div><div class="stat-label">Q&A Pairs</div><div class="stat-val">16</div><div class="stat-meta">284,500 tokens used</div></div>
+  </div>
+  <div class="tbl-wrap mb-6">
+    <div class="tbl-hdr"><div class="tbl-title">Recent Sessions</div><button class="btn btn-g btn-sm" onclick="nav('qa')">View All →</button></div>
+    <table><thead><tr><th>Purpose</th><th>Project</th><th>Agent</th><th>State</th><th>Q&A</th><th>Duration</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Integration Planning Session</strong></td><td>Acme Corp Sales</td><td>TechSales Bot</td><td><span class="badge b-live"><span class="dot"></span> Live</span></td><td>3</td><td class="mono text-xs">12 min (live)</td></tr>
+      <tr><td><strong>Q3 Technical Architecture Review</strong></td><td>Acme Corp Sales</td><td>TechSales Bot</td><td><span class="badge b-summary"><span class="dot"></span> Finished</span></td><td>8</td><td class="mono text-xs">47 min</td></tr>
+      <tr><td><strong>Product Walkthrough</strong></td><td>Global Logistics Demo</td><td>Demo Agent</td><td><span class="badge b-ended"><span class="dot"></span> Ended</span></td><td>5</td><td class="mono text-xs">32 min</td></tr>
+      <tr><td><strong>Security Compliance Review</strong></td><td>Acme Corp Sales</td><td>TechSales Bot</td><td><span class="badge b-ended"><span class="dot"></span> Ended</span></td><td>0</td><td class="mono text-xs">—</td></tr>
+    </tbody></table>
+  </div>
+  <div class="tbl-wrap">
+    <div class="tbl-hdr"><div class="tbl-title">Recent Q&A Pairs</div><button class="btn btn-g btn-sm" onclick="nav('qa')">View All →</button></div>
+    <table><thead><tr><th>Question</th><th>Answer</th><th>Session</th><th>Time</th><th>Conf.</th></tr></thead>
+    <tbody>
+      <tr><td style="max-width:220px" class="truncate"><strong>What kind of encryption do you use for data at rest?</strong></td><td style="max-width:280px" class="truncate">We use AES-256 encryption for all data at rest, managed through AWS KMS...</td><td>Q3 Architecture Review</td><td class="mono text-xs">09:05:32</td><td><span class="badge b-ok">92%</span></td></tr>
+      <tr><td style="max-width:220px" class="truncate"><strong>How does the system handle concurrent users?</strong></td><td style="max-width:280px" class="truncate">Our system uses auto-scaling through ECS Fargate, dynamically adjusting...</td><td>Q3 Architecture Review</td><td class="mono text-xs">09:12:18</td><td><span class="badge b-warn">88%</span></td></tr>
+      <tr><td style="max-width:220px" class="truncate"><strong>Can we integrate this with our existing Slack workspace?</strong></td><td style="max-width:280px" class="truncate">Currently, the system focuses on Google Meet integration. Slack...</td><td>Integration Planning</td><td class="mono text-xs">10:35:41</td><td><span class="badge b-warn">85%</span></td></tr>
+    </tbody></table>
+  </div>
+</div>
+
+<!-- PROJECTS LIST -->
+<div class="page" id="p-projects">
+  <div class="pg-hdr"><div><h1>Projects</h1><div class="pg-sub">Manage projects and user assignments</div></div><div class="pg-actions"><button class="btn btn-p" onclick="nav('project-create')">+ New Project</button></div></div>
+  <div class="filters"><div class="search-box"><span class="si">🔍</span><input placeholder="Search projects..."></div><select class="fsel"><option>All Status</option><option>Active</option><option>Archived</option></select></div>
+  <div class="tbl-wrap">
+    <table><thead><tr><th>Project Name</th><th>Default Agent</th><th>Gmail Credential</th><th>Users</th><th>Sessions</th><th></th></tr></thead>
+    <tbody>
+      <tr style="cursor:pointer" onclick="nav('project-detail')"><td><strong class="text-p">Acme Corp Sales</strong><div class="text-xs text-t mt-1">Enterprise sales meetings with Acme Corp</div></td><td>TechSales Bot</td><td class="mono text-sm"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="780c1d1b100b19141d0b551a170c38191f1d160c0b561b171508191601561b1715">someone@email.com</a></td><td>4</td><td>12</td><td><button class="btn btn-g btn-sm" onclick="event.stopPropagation();nav('project-detail')">Open →</button></td></tr>
+      <tr style="cursor:pointer" onclick="nav('project-detail')"><td><strong class="text-p">Global Logistics Demo</strong><div class="text-xs text-t mt-1">Product demos for integration team</div></td><td>Demo Agent</td><td class="mono text-sm"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="b4d0d1d9db99d5d3d1dac0f4d5d3d1dac0c79ad7dbd9c4d5dacd9ad7dbd9">someone@email.com</a></td><td>2</td><td>5</td><td><button class="btn btn-g btn-sm" onclick="event.stopPropagation();nav('project-detail')">Open →</button></td></tr>
+      <tr style="cursor:pointer" onclick="nav('project-detail')"><td><strong class="text-p">Internal Training</strong><div class="text-xs text-t mt-1">Internal team upskilling sessions</div></td><td>TechSales Bot</td><td class="text-t">—</td><td>8</td><td>3</td><td><button class="btn btn-g btn-sm" onclick="event.stopPropagation();nav('project-detail')">Open →</button></td></tr>
+    </tbody></table>
+    <div class="tbl-foot"><span>3 projects</span></div>
+  </div>
+</div>
+
+<!-- PROJECT CREATE -->
+<div class="page" id="p-project-create">
+  <div class="bc"><a href="#" onclick="nav('projects');return false">Projects</a><span class="sep">›</span><span class="cur">New Project</span></div>
+  <div class="pg-hdr"><div><h1>Create New Project</h1><div class="pg-sub">Set up a new project with agent and knowledge base configuration</div></div></div>
+  <div class="card" style="max-width:680px"><div class="card-body">
+    <div class="form-g"><label class="form-l">Project Name <span class="req">*</span></label><input class="form-i" placeholder="e.g. Acme Corp Sales"></div>
+    <div class="form-g"><label class="form-l">Description</label><textarea class="form-ta" placeholder="Brief description of the project scope and purpose..."></textarea></div>
+    <div class="form-g"><label class="form-l">Default Agent <span class="req">*</span></label><select class="form-sel"><option value="">Select agent...</option><option>TechSales Bot</option><option>Demo Agent</option><option>Support Agent</option></select><div class="form-h">The agent that will be used by default for sessions in this project.</div></div>
+    <div class="form-g"><label class="form-l">Gmail Credential</label><select class="form-sel"><option value="">Select credential...</option><option><template class="__cf_email__" data-cfemail="deaabbbdb6adbfb2bbadf3bcb1aa9ebfb9bbb0aaadf0bdb1b3aebfb0a7f0bdb1b3">someone@email.com</template></option><option><template class="__cf_email__" data-cfemail="640001090b490503010a10240503010a10174a070b0914050a1d4a070b09">someone@email.com</template></option><option><template class="__cf_email__" data-cfemail="7b080e0b0b14090f5619140f3b1a1c1e150f08551814160b1a150255181416">someone@email.com</template></option></select><div class="form-h">The Gmail account this project uses to join Google Meet sessions.</div></div>
+    <div class="divider"></div>
+    <div class="form-g"><label class="form-l">Assign Initial Users</label><input class="form-i" placeholder="user@company.com, another@company.com"><div class="form-h">Comma-separated emails. Users will receive an invite if they don't have an account.</div></div>
+    <div class="flex gap-3 mt-6 jc-end">
+      <button class="btn btn-s btn-lg" onclick="nav('projects')">Cancel</button>
+      <button class="btn btn-p btn-lg" onclick="nav('project-detail')">Create Project →</button>
+    </div>
+  </div></div>
+</div>
+
+<!-- PROJECT DETAIL -->
+<div class="page" id="p-project-detail">
+  <div class="bc"><a href="#" onclick="nav('projects');return false">Projects</a><span class="sep">›</span><span class="cur">Acme Corp Sales</span></div>
+  <div class="pg-hdr"><div><h1>Acme Corp Sales</h1><div class="pg-sub">Enterprise sales meetings with Acme Corp technical team</div></div><div class="pg-actions"><button class="btn btn-s" onclick="nav('project-edit')">Edit Project</button></div></div>
+  <div class="g g5 mb-6">
+    <div class="stat" style="cursor:default"><div class="stat-label">Default Agent</div><div class="stat-val" style="font-size:15px;margin-top:4px">TechSales Bot</div></div>
+    <div class="stat" style="cursor:default"><div class="stat-label">Gmail Credential</div><div class="stat-val" style="font-size:11px;font-weight:500;margin-top:4px;font-family:var(--mono);word-break:break-all"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="4c38292f243f2d20293f612e23380c2d2b2922383f622f23213c2d2235622f2321">someone@email.com</a></div></div>
+    <div class="stat" style="cursor:default"><div class="stat-label">KB Prefix</div><div class="stat-val" style="font-size:18px;margin-top:4px"><code>acme-corp</code></div></div>
+    <div class="stat" style="cursor:default"><div class="stat-label">Assigned Users</div><div class="stat-val">4</div></div>
+    <div class="stat" style="cursor:default"><div class="stat-label">Total Sessions</div><div class="stat-val">3</div></div>
+  </div>
+  <div class="card mb-6" style="border-color:var(--err-500);background:var(--err-50)">
+    <div class="card-body" style="padding:14px 20px">
+      <div class="flex items-c gap-3">
+        <span class="badge b-live" style="font-size:12px;padding:4px 10px"><span class="dot"></span> Live Session</span>
+        <div><div class="text-sm fw-sb text-p">Integration Planning</div><div class="text-xs text-t">Started by Sarah Chen · 12 min ago · 3 Q&A pairs</div></div>
+        <button class="btn btn-s btn-sm" style="margin-left:auto" onclick="nav('qa')">View Live →</button>
+      </div>
+    </div>
+  </div>
+  <div class="kb-folder mb-6">
+    <div class="kb-folder-hdr" onclick="toggleFolder('pd-kb-acme')">
+      <div class="flex items-c gap-3">
+        <span style="font-size:18px">📚</span>
+        <div><div class="text-sm fw-sb">Knowledge Base</div><div class="text-xs text-t">3 documents · Last updated Mar 12, 2026 · <span class="kb-folder-tag">prefix: acme-corp</span></div></div>
+      </div>
+      <div class="flex gap-2 items-c">
+        <span class="text-xs text-t" id="pd-kb-acme-toggle">▲ collapse</span>
+        <label class="upload-zone" style="display:inline-flex;align-items:center;gap:6px;padding:4px 12px;margin:0;border-style:dashed;border-width:1px;cursor:pointer;font-size:12px;color:var(--pri-500);background:var(--pri-25)" onclick="event.stopPropagation()">📤 Upload Doc</label>
+      </div>
+    </div>
+    <div id="pd-kb-acme">
+      <table style="width:100%;border-collapse:collapse">
+        <thead><tr><th style="text-align:left;font-size:11px;font-weight:500;color:var(--gray-500);text-transform:uppercase;letter-spacing:.05em;padding:10px 20px;border-bottom:1px solid var(--gray-100);background:var(--gray-25)">Document</th><th style="text-align:left;font-size:11px;font-weight:500;color:var(--gray-500);text-transform:uppercase;padding:10px 20px;border-bottom:1px solid var(--gray-100);background:var(--gray-25)">Size</th><th style="text-align:left;font-size:11px;font-weight:500;color:var(--gray-500);text-transform:uppercase;padding:10px 20px;border-bottom:1px solid var(--gray-100);background:var(--gray-25)">Status</th><th style="text-align:left;font-size:11px;font-weight:500;color:var(--gray-500);text-transform:uppercase;padding:10px 20px;border-bottom:1px solid var(--gray-100);background:var(--gray-25)">Uploaded</th><th style="padding:10px 20px;border-bottom:1px solid var(--gray-100);background:var(--gray-25)"></th></tr></thead>
+        <tbody>
+          <tr><td style="padding:12px 20px;border-bottom:1px solid var(--gray-100)"><div class="flex items-c gap-3"><div class="doc-icon pdf">📕</div><div class="text-sm fw-m text-p">Platform Architecture Overview.pdf</div></div></td><td style="padding:12px 20px;font-family:var(--mono);font-size:13px;border-bottom:1px solid var(--gray-100)">2.4 MB</td><td style="padding:12px 20px;border-bottom:1px solid var(--gray-100)"><span class="badge b-indexed"><span class="dot"></span> indexed</span></td><td style="padding:12px 20px;font-size:12px;border-bottom:1px solid var(--gray-100)">Mar 10, 2026</td><td style="padding:12px 20px;border-bottom:1px solid var(--gray-100)"><button class="btn btn-d btn-sm">Delete</button></td></tr>
+          <tr><td style="padding:12px 20px;border-bottom:1px solid var(--gray-100)"><div class="flex items-c gap-3"><div class="doc-icon docx">📘</div><div class="text-sm fw-m text-p">API Reference Guide.docx</div></div></td><td style="padding:12px 20px;font-family:var(--mono);font-size:13px;border-bottom:1px solid var(--gray-100)">1.1 MB</td><td style="padding:12px 20px;border-bottom:1px solid var(--gray-100)"><span class="badge b-indexed"><span class="dot"></span> indexed</span></td><td style="padding:12px 20px;font-size:12px;border-bottom:1px solid var(--gray-100)">Mar 10, 2026</td><td style="padding:12px 20px;border-bottom:1px solid var(--gray-100)"><button class="btn btn-d btn-sm">Delete</button></td></tr>
+          <tr><td style="padding:12px 20px"><div class="flex items-c gap-3"><div class="doc-icon pdf">📕</div><div class="text-sm fw-m text-p">Security Compliance Checklist.pdf</div></div></td><td style="padding:12px 20px;font-family:var(--mono);font-size:13px">890 KB</td><td style="padding:12px 20px"><span class="badge b-indexed"><span class="dot"></span> indexed</span></td><td style="padding:12px 20px;font-size:12px">Mar 12, 2026</td><td style="padding:12px 20px"><button class="btn btn-d btn-sm">Delete</button></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="tabs"><div class="tab active" onclick="switchTab(this,'pd-users')">Assigned Users</div><div class="tab" onclick="switchTab(this,'pd-sessions')">Session History</div></div>
+  <div class="tab-c active" id="pd-users">
+    <div class="flex jc-b items-c mb-4"><div class="text-sm text-t">4 users assigned</div><button class="btn btn-p btn-sm">+ Assign User</button></div>
+    <div class="tbl-wrap"><table><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Added</th><th></th></tr></thead><tbody>
+      <tr><td><strong>Sarah Chen</strong></td><td class="mono text-sm"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="4c3f2d3e2d24622f2429220c29342d213c2029622f2321">someone@email.com</a></td><td><span class="badge b-gray">user</span></td><td class="text-xs">Feb 10, 2026</td><td><button class="btn btn-d btn-sm">Remove</button></td></tr>
+      <tr><td><strong>Mike Lee</strong></td><td class="mono text-sm"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="fe9397959bd0929b9bbe9b869f938e929bd09d9193">someone@email.com</a></td><td><span class="badge b-gray">user</span></td><td class="text-xs">Feb 12, 2026</td><td><button class="btn btn-d btn-sm">Remove</button></td></tr>
+      <tr><td><strong>Anna Park</strong></td><td class="mono text-sm"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="21404f4f400f5140534a614459404c514d440f424e4c">someone@email.com</a></td><td><span class="badge b-gray">user</span></td><td class="text-xs">Feb 15, 2026</td><td><button class="btn btn-d btn-sm">Remove</button></td></tr>
+      <tr><td><strong>James Wu</strong></td><td class="mono text-sm"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="0268636f67712c757742677a636f726e672c616d6f">someone@email.com</a></td><td><span class="badge b-gray">user</span></td><td class="text-xs">Mar 1, 2026</td><td><button class="btn btn-d btn-sm">Remove</button></td></tr>
+    </tbody></table></div>
+  </div>
+  <div class="tab-c" id="pd-sessions">
+    <div class="tbl-wrap"><table><thead><tr><th>Purpose</th><th>State</th><th>Q&A</th><th>Duration</th><th>Created By</th><th></th></tr></thead><tbody>
+      <tr><td><strong>Q3 Architecture Review</strong></td><td><span class="badge b-summary"><span class="dot"></span> Finished</span></td><td>8</td><td class="mono text-xs">47 min</td><td>Sarah Chen</td><td><button class="btn btn-s btn-sm">Review</button></td></tr>
+      <tr><td><strong>Integration Planning</strong></td><td><span class="badge b-live"><span class="dot"></span> Live</span></td><td>3</td><td class="mono text-xs">12 min</td><td>Sarah Chen</td><td><button class="btn btn-s btn-sm">Review</button></td></tr>
+      <tr><td><strong>Security Compliance Review</strong></td><td><span class="badge b-ended"><span class="dot"></span> Ended</span></td><td>0</td><td class="mono text-xs">—</td><td>Sarah Chen</td><td><button class="btn btn-s btn-sm">Review</button></td></tr>
+    </tbody></table></div>
+  </div>
+</div>
+
+<!-- PROJECT EDIT -->
+<div class="page" id="p-project-edit">
+  <div class="bc"><a href="#" onclick="nav('projects');return false">Projects</a><span class="sep">›</span><a href="#" onclick="nav('project-detail');return false">Acme Corp Sales</a><span class="sep">›</span><span class="cur">Edit</span></div>
+  <div class="pg-hdr"><div><h1>Edit Project</h1><div class="pg-sub">Acme Corp Sales</div></div></div>
+  <div class="card" style="max-width:680px"><div class="card-body">
+    <div class="form-g"><label class="form-l">Project Name <span class="req">*</span></label><input class="form-i" value="Acme Corp Sales"></div>
+    <div class="form-g"><label class="form-l">Description</label><textarea class="form-ta">Enterprise sales meetings with Acme Corp technical team</textarea></div>
+    <div class="form-g"><label class="form-l">Default Agent</label><select class="form-sel"><option selected>TechSales Bot</option><option>Demo Agent</option><option>Support Agent</option></select></div>
+    <div class="form-g"><label class="form-l">Gmail Credential</label><select class="form-sel"><option selected><template class="__cf_email__" data-cfemail="027667616a71636e67712f606d76426365676c76712c616d6f72636c7b2c616d6f">someone@email.com</template></option><option><template class="__cf_email__" data-cfemail="0e6a6b6361236f696b607a4e6f696b607a7d206d61637e6f6077206d6163">someone@email.com</template></option><option><template class="__cf_email__" data-cfemail="c7b4b2b7b7a8b5b3eaa5a8b387a6a0a2a9b3b4e9a4a8aab7a6a9bee9a4a8aa">someone@email.com</template></option></select><div class="form-h">The Gmail account this project uses to join Google Meet sessions.</div></div>
+    <div class="form-g"><label class="form-l">KB Prefix / Tag</label><input class="form-i" value="acme-corp"><div class="form-h">Changing this will require re-indexing all documents.</div></div>
+    <div class="divider"></div>
+    <div class="flex gap-3 jc-b mt-6">
+      <button class="btn btn-d">Archive Project</button>
+      <div class="flex gap-3"><button class="btn btn-s btn-lg" onclick="nav('project-detail')">Cancel</button><button class="btn btn-p btn-lg" onclick="nav('project-detail')">Save Changes</button></div>
+    </div>
+  </div></div>
+</div>
+
+<!-- AGENTS LIST -->
+<!-- CHANGE 3: badges are now Enabled / Disabled only — no Gmail reference -->
+<div class="page" id="p-agents">
+  <div class="pg-hdr"><div><h1>Agents</h1><div class="pg-sub">Configured meeting agent instances</div></div><div class="pg-actions"><button class="btn btn-p" onclick="nav('agent-create')">+ New Agent</button></div></div>
+
+  <div class="agent-list-card" onclick="nav('agent-detail')">
+    <div class="agent-list-row">
+      <div style="width:44px;height:44px;background:var(--ok-50);border-radius:10px;display:grid;place-items:center;font-size:22px;flex-shrink:0">🤖</div>
+      <div style="flex:1">
+        <div class="flex items-c gap-3"><strong class="text-md">TechSales Bot</strong><span class="badge b-ok"><span class="dot"></span> Enabled</span></div>
+        <div class="text-xs text-t mt-1">Professional and concise · Used by 2 projects · Last active: 1h ago</div>
+        <div class="text-xs text-t" style="margin-top:2px">Last updated: Mar 15, 2026</div>
+      </div>
+      <div class="flex gap-2">
+        <button class="btn btn-s btn-sm" onclick="event.stopPropagation();nav('agent-detail')">View</button>
+        <button class="btn btn-g btn-sm" onclick="event.stopPropagation();nav('agent-edit')">Edit</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="agent-list-card" onclick="nav('agent-detail')">
+    <div class="agent-list-row">
+      <div style="width:44px;height:44px;background:var(--ok-50);border-radius:10px;display:grid;place-items:center;font-size:22px;flex-shrink:0">🤖</div>
+      <div style="flex:1">
+        <div class="flex items-c gap-3"><strong class="text-md">Demo Agent</strong><span class="badge b-ok"><span class="dot"></span> Enabled</span></div>
+        <div class="text-xs text-t mt-1">Enthusiastic and detailed · Used by 1 project · Last active: 1d ago</div>
+        <div class="text-xs text-t" style="margin-top:2px">Last updated: Mar 10, 2026</div>
+      </div>
+      <div class="flex gap-2">
+        <button class="btn btn-s btn-sm" onclick="event.stopPropagation();nav('agent-detail')">View</button>
+        <button class="btn btn-g btn-sm" onclick="event.stopPropagation();nav('agent-edit')">Edit</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="agent-list-card" onclick="nav('agent-detail')">
+    <div class="agent-list-row">
+      <div style="width:44px;height:44px;background:var(--gray-100);border-radius:10px;display:grid;place-items:center;font-size:22px;flex-shrink:0">🤖</div>
+      <div style="flex:1">
+        <div class="flex items-c gap-3"><strong class="text-md">Support Agent</strong><span class="badge b-gray"><span class="dot"></span> Disabled</span></div>
+        <div class="text-xs text-t mt-1">Patient and thorough · Used by 0 projects · Never active</div>
+        <div class="text-xs text-t" style="margin-top:2px">Last updated: Mar 5, 2026</div>
+      </div>
+      <div class="flex gap-2">
+        <button class="btn btn-s btn-sm" onclick="event.stopPropagation();nav('agent-detail')">View</button>
+        <button class="btn btn-g btn-sm" onclick="event.stopPropagation();nav('agent-edit')">Edit</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- AGENT CREATE -->
+<div class="page" id="p-agent-create">
+  <div class="bc"><a href="#" onclick="nav('agents');return false">Agents</a><span class="sep">›</span><span class="cur">New Agent</span></div>
+  <div class="pg-hdr"><div><h1>Create New Agent</h1><div class="pg-sub">Configure a new meeting agent instance</div></div></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start">
+    <div class="card"><div class="card-hdr"><div class="text-md fw-sb">Agent Configuration</div></div><div class="card-body">
+      <div class="form-g"><label class="form-l">Agent Name <span class="req">*</span></label><input class="form-i" placeholder="e.g. TechSales Bot"></div>
+      <div class="divider"></div>
+      <div class="form-g"><label class="form-l">Agent Objectives</label><textarea class="form-ta" rows="3" placeholder="e.g. Answer technical questions accurately, focus on product capabilities and pricing..."></textarea></div>
+      <div class="form-g"><label class="form-l">Behavioral Guidelines</label><textarea class="form-ta" rows="3" placeholder="e.g. Always be professional. Do not speculate. Cite sources when possible..."></textarea></div>
+      <div class="form-g"><label class="form-l">Personality Traits</label><input class="form-i" placeholder="e.g. Professional, concise, confident"></div>
+      <div class="form-g"><label class="form-l">Answering Tone</label><select class="form-sel"><option>Professional and neutral</option><option>Friendly and approachable</option><option>Concise and direct</option><option>Detailed and thorough</option></select></div>
+      <div class="form-g"><label class="form-l">Role</label><textarea class="form-ta" rows="6" placeholder="Describe the agent's role and how it should behave in meetings..."></textarea><div class="form-h">Defines who the agent is and how it behaves. Auto-generated from the fields above, or write manually.</div></div>
+      <div class="divider"></div>
+      <div class="form-g">
+        <label class="form-l">Skill Buckets <span style="font-weight:400;color:var(--gray-400)">(optional)</span></label>
+        <div style="border:1px solid var(--gray-200);border-radius:8px;overflow:hidden">
+          <div style="padding:8px 12px;background:var(--gray-25);border-bottom:1px solid var(--gray-100);font-size:11px;color:var(--gray-500)">Hold Ctrl / Cmd to select multiple</div>
+          <select class="form-sel" multiple size="4" style="border:none;border-radius:0;padding:0;background:var(--white);height:auto;appearance:none;background-image:none">
+            <option value="sales-skills" style="padding:10px 14px;font-size:13px">⚡ Sales Skills &nbsp;&nbsp; real-time &nbsp;·&nbsp; prefix: sales-skills</option>
+            <option value="summary-skills" style="padding:10px 14px;font-size:13px">⚡ Meeting Summary Skills &nbsp;&nbsp; post-session &nbsp;·&nbsp; prefix: summary-skills</option>
+          </select>
+        </div>
+        <div class="form-h">Skill bucket instructions will be injected alongside this agent's role during sessions.</div>
+      </div>
+    </div></div>
+    <div>
+      <div class="card mb-4"><div class="card-hdr"><div class="text-md fw-sb">Test Prompt (Preview)</div><div class="text-xs text-t">Chat as if you're the client</div></div>
+        <div class="chat-test-panel" style="border:none;border-radius:0">
+          <div class="chat-test-msgs" id="test-msgs-create">
+            <div class="chat-test-item ai"><div class="agent-lbl">New Agent</div>Hello! I'm your meeting assistant. Ask me a technical question to test my configuration.</div>
+          </div>
+          <div class="chat-test-input">
+            <input type="text" placeholder="Type a test question..." onkeydown="if(event.key==='Enter')testPrompt('create')">
+            <button onclick="testPrompt('create')">Send</button>
+          </div>
+        </div>
+      </div>
+      <div class="flex gap-3 jc-end">
+        <button class="btn btn-s btn-lg" onclick="nav('agents')">Cancel</button>
+        <button class="btn btn-p btn-lg" onclick="nav('agent-detail')">Create Agent →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- AGENT DETAIL -->
+<div class="page" id="p-agent-detail">
+  <div class="bc"><a href="#" onclick="nav('agents');return false">Agents</a><span class="sep">›</span><span class="cur">TechSales Bot</span></div>
+  <div class="agent-detail-hdr mb-6">
+    <div class="agent-avatar">🤖</div>
+    <div style="flex:1">
+      <div class="flex items-c gap-3 mb-1"><h2 style="font-size:22px;font-weight:800">TechSales Bot</h2><span class="badge b-ok"><span class="dot"></span> Enabled</span></div>
+      <div class="text-xs text-t">Used by 2 projects · Last active: 1 hour ago</div>
+      <div class="text-xs text-t mt-1">Last updated: <strong>Mar 15, 2026 at 16:20</strong> by Richie Tan</div>
+    </div>
+    <div class="flex gap-2"><button class="btn btn-s" onclick="nav('agent-edit')">Edit Agent</button></div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start">
+    <div>
+      <div class="card mb-6">
+        <div class="card-hdr"><div class="text-md fw-sb">Current Role</div><div class="text-xs text-t mono">Mar 15, 2026 · 16:20</div></div>
+        <div class="card-body" style="background:var(--gray-25)">
+          <p style="font-size:13px;line-height:1.7;color:var(--gray-700);white-space:pre-wrap;font-family:var(--mono)">You are TechSales Bot, a professional AI meeting assistant. Your objective is to answer technical questions accurately using the provided knowledge base. Always respond concisely and professionally. Reference specific documentation when possible. Do not speculate beyond provided context.</p>
+        </div>
+      </div>
+      <div class="card mb-6">
+        <div class="card-hdr"><div class="text-md fw-sb">Role History</div></div>
+        <div style="border-bottom:1px solid var(--gray-100);padding:14px 20px">
+          <div class="flex jc-b items-c mb-2"><span class="text-xs fw-sb text-p">v2 — Mar 10, 2026 · 11:05 by Richie Tan</span><button class="btn btn-g btn-sm">Restore</button></div>
+          <p style="font-size:12px;line-height:1.6;color:var(--gray-500);font-family:var(--mono);white-space:pre-wrap">You are TechSales Bot. Answer questions accurately and professionally based on provided documents. Do not guess.</p>
+        </div>
+        <div style="padding:14px 20px">
+          <div class="flex jc-b items-c mb-2"><span class="text-xs fw-sb text-p">v1 — Mar 5, 2026 · 09:30 by Richie Tan</span><button class="btn btn-g btn-sm">Restore</button></div>
+          <p style="font-size:12px;line-height:1.6;color:var(--gray-500);font-family:var(--mono);white-space:pre-wrap">You are a helpful meeting assistant. Answer questions based on the knowledge base.</p>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="card mb-6">
+        <div class="card-hdr"><div class="text-md fw-sb">Configuration</div></div>
+        <div class="card-body">
+          <div class="flex jc-b items-c" style="padding:6px 0;border-bottom:1px solid var(--gray-100)"><span class="text-xs text-t">Agent Name</span><span class="text-sm fw-m">TechSales Bot</span></div>
+          <div class="flex jc-b items-c" style="padding:6px 0;border-bottom:1px solid var(--gray-100)"><span class="text-xs text-t">Personality</span><span class="text-sm fw-m">Professional, concise, confident</span></div>
+          <div class="flex jc-b items-c" style="padding:6px 0"><span class="text-xs text-t">Answering Tone</span><span class="text-sm fw-m">Professional and neutral</span></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hdr"><div class="text-md fw-sb">Assigned Projects</div></div>
+        <div class="card-body" style="display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;align-items:center;gap:12px;padding:12px;background:var(--gray-25);border:1px solid var(--gray-200);border-radius:8px">
+            <span style="font-size:18px">📁</span>
+            <div style="flex:1"><div class="text-sm fw-sb">Acme Corp Sales</div><div class="text-xs text-t mt-1">12 sessions · 4 users</div></div>
+            <span class="badge b-ok"><span class="dot"></span> active</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;padding:12px;background:var(--gray-25);border:1px solid var(--gray-200);border-radius:8px">
+            <span style="font-size:18px">📁</span>
+            <div style="flex:1"><div class="text-sm fw-sb">Global Logistics Demo</div><div class="text-xs text-t mt-1">5 sessions · 2 users</div></div>
+            <span class="badge b-ok"><span class="dot"></span> active</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- AGENT EDIT -->
+<div class="page" id="p-agent-edit">
+  <div class="bc"><a href="#" onclick="nav('agents');return false">Agents</a><span class="sep">›</span><a href="#" onclick="nav('agent-detail');return false">TechSales Bot</a><span class="sep">›</span><span class="cur">Edit</span></div>
+  <div class="pg-hdr"><div><h1>Edit Agent</h1><div class="pg-sub">TechSales Bot</div></div></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start">
+    <div class="card"><div class="card-hdr"><div class="text-md fw-sb">Configuration</div></div><div class="card-body">
+      <div class="form-g"><label class="form-l">Agent Name</label><input class="form-i" value="TechSales Bot"></div>
+      <div class="divider"></div>
+      <div class="form-g"><label class="form-l">Agent Objectives</label><textarea class="form-ta" rows="3">Answer technical questions about product capabilities, pricing, and integrations accurately and concisely.</textarea></div>
+      <div class="form-g"><label class="form-l">Behavioral Guidelines</label><textarea class="form-ta" rows="3">Always be professional. Do not speculate outside the knowledge base. Cite source documents when applicable.</textarea></div>
+      <div class="form-g"><label class="form-l">Personality Traits</label><input class="form-i" value="Professional, concise, confident"></div>
+      <div class="form-g"><label class="form-l">Answering Tone</label><select class="form-sel"><option selected>Professional and neutral</option><option>Friendly and approachable</option><option>Concise and direct</option></select></div>
+      <div class="form-g"><label class="form-l">Role</label><textarea class="form-ta" rows="6">You are TechSales Bot, a professional AI meeting assistant. Your objective is to answer technical questions accurately using the provided knowledge base. Always respond concisely and professionally. Reference specific documentation when possible. Do not speculate beyond provided context.</textarea><div class="form-h">Defines who the agent is and how it behaves. Changes apply within 5 seconds of saving.</div></div>
+      <div class="divider"></div>
+      <div class="form-g">
+        <label class="form-l">Skill Buckets <span style="font-weight:400;color:var(--gray-400)">(optional)</span></label>
+        <div style="border:1px solid var(--gray-200);border-radius:8px;overflow:hidden">
+          <div style="padding:8px 12px;background:var(--gray-25);border-bottom:1px solid var(--gray-100);font-size:11px;color:var(--gray-500)">Hold Ctrl / Cmd to select multiple</div>
+          <select class="form-sel" multiple size="4" style="border:none;border-radius:0;padding:0;background:var(--white);height:auto;appearance:none;background-image:none">
+            <option value="sales-skills" selected style="padding:10px 14px;font-size:13px">⚡ Sales Skills &nbsp;&nbsp; real-time &nbsp;·&nbsp; prefix: sales-skills</option>
+            <option value="summary-skills" style="padding:10px 14px;font-size:13px">⚡ Meeting Summary Skills &nbsp;&nbsp; post-session &nbsp;·&nbsp; prefix: summary-skills</option>
+          </select>
+        </div>
+        <div class="form-h">Skill bucket instructions will be injected alongside this agent's role during sessions.</div>
+      </div>
+      <div class="flex gap-3 jc-b mt-4">
+        <button class="btn btn-s" onclick="nav('agent-detail')">Cancel</button>
+        <button class="btn btn-warn">Load to Test →</button>
+      </div>
+    </div></div>
+    <div class="card">
+      <div class="card-hdr"><div class="text-md fw-sb">Test Prompt</div><div class="text-xs text-t">Loaded from draft — not saved yet</div></div>
+      <div class="chat-test-panel" style="border:none;border-radius:0">
+        <div class="chat-test-msgs" id="test-msgs-detail">
+          <div class="chat-test-item ai"><div class="agent-lbl">TechSales Bot</div>Hello! I'm TechSales Bot. Click "Load to Test" after editing the role to preview changes here.</div>
+        </div>
+        <div class="chat-test-input">
+          <input type="text" placeholder="Type a test question..." onkeydown="if(event.key==='Enter')testPrompt('detail')">
+          <button onclick="testPrompt('detail')">Send</button>
+        </div>
+      </div>
+      <div class="card-foot" style="display:flex;justify-content:flex-end;gap:12px">
+        <button class="btn btn-s" onclick="nav('agent-detail')">Discard</button>
+        <button class="btn btn-p" onclick="nav('agent-detail')">Save Changes</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- KNOWLEDGE BASE (standalone, not in sidebar) -->
+<div class="page" id="p-kb">
+  <div class="pg-hdr"><div><h1>Knowledge Base</h1><div class="pg-sub">Documents organized by project prefix/tag for agent response generation</div></div></div>
+  <div class="filters">
+    <div class="search-box"><span class="si">🔍</span><input placeholder="Search documents..."></div>
+    <select class="fsel"><option>All Projects</option><option>acme-corp</option><option>global-logistics</option></select>
+    <select class="fsel"><option>All Status</option><option>Indexed</option><option>Processing</option><option>Failed</option></select>
+  </div>
+  <div class="kb-folder">
+    <div class="kb-folder-hdr" onclick="toggleFolder('kb-acme')">
+      <div class="flex items-c gap-3"><span style="font-size:18px">📁</span><div><div class="text-sm fw-sb">Acme Corp Sales</div><div class="text-xs text-t">3 documents · Last updated Mar 12, 2026</div></div><span class="kb-folder-tag">prefix: acme-corp</span></div>
+      <div class="flex gap-2 items-c"><span class="text-xs text-t" id="kb-acme-toggle">▲ collapse</span><label class="upload-zone" style="display:inline-flex;align-items:center;gap:6px;padding:4px 12px;margin:0;border-style:dashed;border-width:1px;cursor:pointer;font-size:12px;color:var(--pri-500);background:var(--pri-25)" onclick="event.stopPropagation()">📤 Upload Doc</label></div>
+    </div>
+    <div id="kb-acme">
+      <table style="width:100%;border-collapse:collapse"><thead><tr><th style="text-align:left;font-size:11px;font-weight:500;color:var(--gray-500);text-transform:uppercase;letter-spacing:.05em;padding:10px 20px;border-bottom:1px solid var(--gray-100);background:var(--gray-25)">Document</th><th style="text-align:left;font-size:11px;font-weight:500;color:var(--gray-500);text-transform:uppercase;padding:10px 20px;border-bottom:1px solid var(--gray-100);background:var(--gray-25)">Size</th><th style="text-align:left;font-size:11px;font-weight:500;color:var(--gray-500);text-transform:uppercase;padding:10px 20px;border-bottom:1px solid var(--gray-100);background:var(--gray-25)">Status</th><th style="text-align:left;font-size:11px;font-weight:500;color:var(--gray-500);text-transform:uppercase;padding:10px 20px;border-bottom:1px solid var(--gray-100);background:var(--gray-25)">Uploaded</th><th style="padding:10px 20px;border-bottom:1px solid var(--gray-100);background:var(--gray-25)"></th></tr></thead>
+      <tbody>
+        <tr><td style="padding:12px 20px;border-bottom:1px solid var(--gray-100)"><div class="flex items-c gap-3"><div class="doc-icon pdf">📕</div><div class="text-sm fw-m text-p">Platform Architecture Overview.pdf</div></div></td><td style="padding:12px 20px;font-family:var(--mono);font-size:13px;border-bottom:1px solid var(--gray-100)">2.4 MB</td><td style="padding:12px 20px;border-bottom:1px solid var(--gray-100)"><span class="badge b-indexed"><span class="dot"></span> indexed</span></td><td style="padding:12px 20px;font-size:12px;border-bottom:1px solid var(--gray-100)">Mar 10, 2026</td><td style="padding:12px 20px;border-bottom:1px solid var(--gray-100)"><button class="btn btn-d btn-sm">Delete</button></td></tr>
+        <tr><td style="padding:12px 20px;border-bottom:1px solid var(--gray-100)"><div class="flex items-c gap-3"><div class="doc-icon docx">📘</div><div class="text-sm fw-m text-p">API Reference Guide.docx</div></div></td><td style="padding:12px 20px;font-family:var(--mono);font-size:13px;border-bottom:1px solid var(--gray-100)">1.1 MB</td><td style="padding:12px 20px;border-bottom:1px solid var(--gray-100)"><span class="badge b-indexed"><span class="dot"></span> indexed</span></td><td style="padding:12px 20px;font-size:12px;border-bottom:1px solid var(--gray-100)">Mar 10, 2026</td><td style="padding:12px 20px;border-bottom:1px solid var(--gray-100)"><button class="btn btn-d btn-sm">Delete</button></td></tr>
+        <tr><td style="padding:12px 20px"><div class="flex items-c gap-3"><div class="doc-icon pdf">📕</div><div class="text-sm fw-m text-p">Security Compliance Checklist.pdf</div></div></td><td style="padding:12px 20px;font-family:var(--mono);font-size:13px">890 KB</td><td style="padding:12px 20px"><span class="badge b-indexed"><span class="dot"></span> indexed</span></td><td style="padding:12px 20px;font-size:12px">Mar 12, 2026</td><td style="padding:12px 20px"><button class="btn btn-d btn-sm">Delete</button></td></tr>
+      </tbody></table>
+    </div>
+  </div>
+  <div class="kb-folder">
+    <div class="kb-folder-hdr" onclick="toggleFolder('kb-global')">
+      <div class="flex items-c gap-3"><span style="font-size:18px">📁</span><div><div class="text-sm fw-sb">Global Logistics Demo</div><div class="text-xs text-t">2 documents · Processing</div></div><span class="kb-folder-tag">prefix: global-logistics</span></div>
+      <div class="flex gap-2 items-c"><span class="text-xs text-t" id="kb-global-toggle">▲ collapse</span><label class="upload-zone" style="display:inline-flex;align-items:center;gap:6px;padding:4px 12px;margin:0;border-style:dashed;border-width:1px;cursor:pointer;font-size:12px;color:var(--pri-500);background:var(--pri-25)" onclick="event.stopPropagation()">📤 Upload Doc</label></div>
+    </div>
+    <div id="kb-global">
+      <table style="width:100%;border-collapse:collapse"><thead><tr><th style="text-align:left;font-size:11px;font-weight:500;color:var(--gray-500);text-transform:uppercase;letter-spacing:.05em;padding:10px 20px;border-bottom:1px solid var(--gray-100);background:var(--gray-25)">Document</th><th style="padding:10px 20px;border-bottom:1px solid var(--gray-100);background:var(--gray-25);font-size:11px;font-weight:500;color:var(--gray-500);text-transform:uppercase">Size</th><th style="padding:10px 20px;border-bottom:1px solid var(--gray-100);background:var(--gray-25);font-size:11px;font-weight:500;color:var(--gray-500);text-transform:uppercase">Status</th><th style="padding:10px 20px;border-bottom:1px solid var(--gray-100);background:var(--gray-25);font-size:11px;font-weight:500;color:var(--gray-500);text-transform:uppercase">Uploaded</th><th style="padding:10px 20px;border-bottom:1px solid var(--gray-100);background:var(--gray-25)"></th></tr></thead>
+      <tbody>
+        <tr><td style="padding:12px 20px;border-bottom:1px solid var(--gray-100)"><div class="flex items-c gap-3"><div class="doc-icon txt">📄</div><div class="text-sm fw-m text-p">Product Feature Matrix.txt</div></div></td><td style="padding:12px 20px;font-family:var(--mono);font-size:13px;border-bottom:1px solid var(--gray-100)">45 KB</td><td style="padding:12px 20px;border-bottom:1px solid var(--gray-100)"><span class="badge b-embedding"><span class="dot"></span> embedding</span></td><td style="padding:12px 20px;font-size:12px;border-bottom:1px solid var(--gray-100)">Mar 15, 2026</td><td style="padding:12px 20px;border-bottom:1px solid var(--gray-100)"><button class="btn btn-d btn-sm">Delete</button></td></tr>
+        <tr><td style="padding:12px 20px"><div class="flex items-c gap-3"><div class="doc-icon pdf">📕</div><div class="text-sm fw-m text-p">Pricing Tier Breakdown.pdf</div></div></td><td style="padding:12px 20px;font-family:var(--mono);font-size:13px">310 KB</td><td style="padding:12px 20px"><span class="badge b-extracting"><span class="dot"></span> extracting</span></td><td style="padding:12px 20px;font-size:12px">Mar 16, 2026</td><td style="padding:12px 20px"><button class="btn btn-d btn-sm">Delete</button></td></tr>
+      </tbody></table>
+    </div>
+  </div>
+  <div class="card" style="background:var(--gray-25);border-color:var(--gray-100)"><div class="card-body" style="padding:14px 20px"><div class="text-xs text-t">📌 Documents are stored in Amazon OpenSearch, prefixed per project. Each project folder isolates its documents using the configured KB prefix/tag.</div></div></div>
+</div>
+
+<!-- SKILLS — CHANGE 1: KB-style bucket system with prefix + uploadable skill files -->
+<div class="page" id="p-skills">
+  <div class="pg-hdr"><div><h1>Skills</h1><div class="pg-sub">Skill instruction buckets — each bucket has a prefix and contains uploadable skill files injected into the agent</div></div><div class="pg-actions"><button class="btn btn-p" onclick="nav('skill-create')">+ New Skill Bucket</button></div></div>
+
+  <div class="filters">
+    <div class="search-box"><span class="si">🔍</span><input placeholder="Search skill buckets..."></div>
+    <select class="fsel"><option>All Types</option><option>real-time</option><option>post-session</option></select>
+  </div>
+
+  <!-- Sales Skills bucket -->
+  <div class="kb-folder">
+    <div class="kb-folder-hdr" onclick="toggleFolder('sk-sales')">
+      <div class="flex items-c gap-3">
+        <span style="font-size:18px">⚡</span>
+        <div><div class="text-sm fw-sb">Sales Skills</div><div class="text-xs text-t">3 skill files · Last updated Mar 15, 2026</div></div>
+        <span class="kb-folder-tag">prefix: sales-skills</span>
+        <span class="badge b-info" style="margin-left:4px">real-time</span>
+      </div>
+      <div class="flex gap-2 items-c">
+        <span class="text-xs text-t" id="sk-sales-toggle">▲ collapse</span>
+        <label class="upload-zone" style="display:inline-flex;align-items:center;gap:6px;padding:4px 12px;margin:0;border-style:dashed;border-width:1px;cursor:pointer;font-size:12px;color:var(--pri-500);background:var(--pri-25)" onclick="event.stopPropagation()">📤 Upload Skill File</label>
+      </div>
+    </div>
+    <div id="sk-sales">
+      <table style="width:100%;border-collapse:collapse">
+        <thead><tr>
+          <th style="text-align:left;font-size:11px;font-weight:500;color:var(--gray-500);text-transform:uppercase;letter-spacing:.05em;padding:10px 20px;border-bottom:1px solid var(--gray-100);background:var(--gray-25)">Skill File</th>
+          <th style="text-align:left;font-size:11px;font-weight:500;color:var(--gray-500);text-transform:uppercase;padding:10px 20px;border-bottom:1px solid var(--gray-100);background:var(--gray-25)">Size</th>
+          <th style="text-align:left;font-size:11px;font-weight:500;color:var(--gray-500);text-transform:uppercase;padding:10px 20px;border-bottom:1px solid var(--gray-100);background:var(--gray-25)">Uploaded</th>
+          <th style="padding:10px 20px;border-bottom:1px solid var(--gray-100);background:var(--gray-25)"></th>
+        </tr></thead>
+        <tbody>
+          <tr><td style="padding:12px 20px;border-bottom:1px solid var(--gray-100)"><div class="flex items-c gap-3"><div class="doc-icon txt">📄</div><div><div class="text-sm fw-m text-p">objection-handling.txt</div><div class="text-xs text-t mt-1">Handles common sales objections with rebuttals</div></div></div></td><td style="padding:12px 20px;font-family:var(--mono);font-size:13px;border-bottom:1px solid var(--gray-100)">12 KB</td><td style="padding:12px 20px;border-bottom:1px solid var(--gray-100)"><span class="badge b-indexed"><span class="dot"></span> verified</span></td><td style="padding:12px 20px;font-size:12px;border-bottom:1px solid var(--gray-100)">Mar 10, 2026</td><td style="padding:12px 20px;border-bottom:1px solid var(--gray-100)"><button class="btn btn-d btn-sm">Delete</button></td></tr>
+          <tr><td style="padding:12px 20px;border-bottom:1px solid var(--gray-100)"><div class="flex items-c gap-3"><div class="doc-icon txt">📄</div><div><div class="text-sm fw-m text-p">pricing-negotiation.txt</div><div class="text-xs text-t mt-1">Pricing tiers and negotiation guidance</div></div></div></td><td style="padding:12px 20px;font-family:var(--mono);font-size:13px;border-bottom:1px solid var(--gray-100)">8 KB</td><td style="padding:12px 20px;border-bottom:1px solid var(--gray-100)"><span class="badge b-indexed"><span class="dot"></span> verified</span></td><td style="padding:12px 20px;font-size:12px;border-bottom:1px solid var(--gray-100)">Mar 12, 2026</td><td style="padding:12px 20px;border-bottom:1px solid var(--gray-100)"><button class="btn btn-d btn-sm">Delete</button></td></tr>
+          <tr><td style="padding:12px 20px"><div class="flex items-c gap-3"><div class="doc-icon txt">📄</div><div><div class="text-sm fw-m text-p">follow-up-templates.txt</div><div class="text-xs text-t mt-1">Email templates for post-meeting follow-ups</div></div></div></td><td style="padding:12px 20px;font-family:var(--mono);font-size:13px">15 KB</td><td style="padding:12px 20px"><span class="badge b-indexed"><span class="dot"></span> verified</span></td><td style="padding:12px 20px;font-size:12px">Mar 15, 2026</td><td style="padding:12px 20px"><button class="btn btn-d btn-sm">Delete</button></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Meeting Summary Skills bucket -->
+  <div class="kb-folder">
+    <div class="kb-folder-hdr" onclick="toggleFolder('sk-summary')">
+      <div class="flex items-c gap-3">
+        <span style="font-size:18px">⚡</span>
+        <div><div class="text-sm fw-sb">Meeting Summary Skills</div><div class="text-xs text-t">1 skill file · Last updated Mar 10, 2026</div></div>
+        <span class="kb-folder-tag">prefix: summary-skills</span>
+        <span class="badge b-pri" style="margin-left:4px">post-session</span>
+      </div>
+      <div class="flex gap-2 items-c">
+        <span class="text-xs text-t" id="sk-summary-toggle">▲ collapse</span>
+        <label class="upload-zone" style="display:inline-flex;align-items:center;gap:6px;padding:4px 12px;margin:0;border-style:dashed;border-width:1px;cursor:pointer;font-size:12px;color:var(--pri-500);background:var(--pri-25)" onclick="event.stopPropagation()">📤 Upload Skill File</label>
+      </div>
+    </div>
+    <div id="sk-summary">
+      <table style="width:100%;border-collapse:collapse">
+        <thead><tr>
+          <th style="text-align:left;font-size:11px;font-weight:500;color:var(--gray-500);text-transform:uppercase;letter-spacing:.05em;padding:10px 20px;border-bottom:1px solid var(--gray-100);background:var(--gray-25)">Skill File</th>
+          <th style="text-align:left;font-size:11px;font-weight:500;color:var(--gray-500);text-transform:uppercase;padding:10px 20px;border-bottom:1px solid var(--gray-100);background:var(--gray-25)">Size</th>
+          <th style="text-align:left;font-size:11px;font-weight:500;color:var(--gray-500);text-transform:uppercase;padding:10px 20px;border-bottom:1px solid var(--gray-100);background:var(--gray-25)">Uploaded</th>
+          <th style="padding:10px 20px;border-bottom:1px solid var(--gray-100);background:var(--gray-25)"></th>
+        </tr></thead>
+        <tbody>
+          <tr><td style="padding:12px 20px"><div class="flex items-c gap-3"><div class="doc-icon txt">📄</div><div><div class="text-sm fw-m text-p">meeting-summariser.txt</div><div class="text-xs text-t mt-1">Formats Q&amp;A pairs into structured meeting notes</div></div></div></td><td style="padding:12px 20px;font-family:var(--mono);font-size:13px">6 KB</td><td style="padding:12px 20px"><span class="badge b-ok"><span class="dot"></span> verified</span></td><td style="padding:12px 20px;font-size:12px">Mar 10, 2026</td><td style="padding:12px 20px"><button class="btn btn-d btn-sm">Delete</button></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card" style="background:var(--gray-25);border-color:var(--gray-100)"><div class="card-body" style="padding:14px 20px"><div class="text-xs text-t">⚡ Skill buckets work like Knowledge Base collections — each bucket has a prefix and contains uploadable instruction files. <strong>Real-time</strong> buckets are injected during sessions; <strong>post-session</strong> buckets trigger after a session ends. Skills are separate from a project's KB.</div></div></div>
+</div>
+
+<!-- SKILL CREATE -->
+<div class="page" id="p-skill-create">
+  <div class="bc"><a href="#" onclick="nav('skills');return false">Skills</a><span class="sep">›</span><span class="cur">New Skill Bucket</span></div>
+  <div class="pg-hdr"><div><h1>Create Skill Bucket</h1><div class="pg-sub">Define a new skill bucket with a prefix — then upload skill instruction files into it</div></div></div>
+  <div class="card" style="max-width:680px"><div class="card-body">
+    <div class="form-g"><label class="form-l">Bucket Name <span class="req">*</span></label><input class="form-i" placeholder="e.g. Sales Skills"></div>
+    <div class="form-g"><label class="form-l">Skill Type <span class="req">*</span></label><select class="form-sel"><option value="">Select type...</option><option>real-time</option><option>post-session</option></select><div class="form-h">Real-time buckets are injected during the session. Post-session buckets trigger after the session ends.</div></div>
+    <div class="form-g"><label class="form-l">Description</label><textarea class="form-ta" rows="3" placeholder="Briefly describe what kind of skills will go in this bucket..."></textarea></div>
+    <div class="flex gap-3 jc-end mt-6">
+      <button class="btn btn-s btn-lg" onclick="nav('skills')">Cancel</button>
+      <button class="btn btn-p btn-lg" onclick="nav('skills')">Create Bucket</button>
+    </div>
+  </div></div>
+</div>
+
+<!-- Q&A MONITOR -->
+<div class="page" id="p-qa">
+  <div class="pg-hdr"><div><h1>Q&A Monitor</h1><div class="pg-sub">All question-answer pairs across sessions, in chronological order</div></div></div>
+  <div class="filters">
+    <div class="search-box"><span class="si">🔍</span><input placeholder="Search questions or answers..."></div>
+    <select class="fsel"><option>All Projects</option><option>Acme Corp Sales</option><option>Global Logistics Demo</option></select>
+    <select class="fsel"><option>All Sessions</option><option>Integration Planning</option><option>Q3 Architecture Review</option></select>
+    <select class="fsel"><option>All Confidence</option><option>High (≥90%)</option><option>Medium (70–89%)</option></select>
+    <select class="fsel"><option>All Dates</option><option>Today</option><option>This Week</option></select>
+  </div>
+  <div class="g g3 mb-5" style="max-width:500px">
+    <div class="stat" style="cursor:default"><div class="stat-label">Total Q&A Pairs</div><div class="stat-val">16</div></div>
+    <div class="stat" style="cursor:default"><div class="stat-label">Avg Confidence</div><div class="stat-val">88%</div></div>
+    <div class="stat" style="cursor:default"><div class="stat-label">Sessions with Q&A</div><div class="stat-val">3</div></div>
+  </div>
+  <div class="qa">
+    <div class="flex jc-b items-s mb-4"><div class="text-xs text-t"><strong>Acme Corp Sales</strong> · Integration Planning · <span class="mono">10:35:41 — Last updated: 10:35:53</span><button class="qa-refresh">↻ Refresh</button></div><span class="badge b-ok">94% confidence</span></div>
+    <div class="qa-q"><div class="qi">Q</div><div class="qa-txt q">Can we integrate this with our existing Slack workspace?</div></div>
+    <div class="qa-a"><div class="ai">A</div><div class="qa-txt">Currently, the system focuses on Google Meet integration. Slack integration is not in the current scope, but the architecture supports future webhook-based integrations.</div></div>
+  </div>
+  <div class="qa">
+    <div class="flex jc-b items-s mb-4"><div class="text-xs text-t"><strong>Acme Corp Sales</strong> · Q3 Architecture Review · <span class="mono">09:05:32 — Last updated: 09:05:44</span><button class="qa-refresh">↻ Refresh</button></div><span class="badge b-ok">92% confidence</span></div>
+    <div class="qa-q"><div class="qi">Q</div><div class="qa-txt q">What kind of encryption do you use for data at rest?</div></div>
+    <div class="qa-a"><div class="ai">A</div><div class="qa-txt">We use AES-256 encryption for all data at rest, managed through AWS KMS. This applies to both our DynamoDB storage and S3 buckets. All keys are rotated annually.</div></div>
+  </div>
+  <div class="qa">
+    <div class="flex jc-b items-s mb-4"><div class="text-xs text-t"><strong>Acme Corp Sales</strong> · Q3 Architecture Review · <span class="mono">09:12:18 — Last updated: 09:12:29</span><button class="qa-refresh">↻ Refresh</button></div><span class="badge b-warn">88% confidence</span></div>
+    <div class="qa-q"><div class="qi">Q</div><div class="qa-txt q">How does the system handle concurrent users?</div></div>
+    <div class="qa-a"><div class="ai">A</div><div class="qa-txt">Our system uses auto-scaling through ECS Fargate, which dynamically adjusts the number of running containers based on load. We support up to 500 concurrent meeting sessions.</div></div>
+  </div>
+</div>
+
+<!-- GMAIL CREDENTIALS — CHANGE 2: no Name column, raw email, two status columns -->
+<div class="page" id="p-gmail">
+  <div class="pg-hdr"><div><h1>Gmail Credentials</h1><div class="pg-sub">Manage Gmail accounts used by projects to join Google Meet</div></div><div class="pg-actions"><button class="btn btn-p" onclick="nav('gmail-create')">+ Add Credential</button></div></div>
+  <div class="card mb-5" style="background:var(--warn-50);border-color:var(--warn-100)"><div class="card-body" style="padding:12px 20px"><div class="flex items-c gap-3"><span>🔒</span><span class="text-sm" style="color:var(--warn-700)">Gmail passwords are encrypted at rest using AWS KMS and are <strong>never displayed in plain text</strong>. Credentials are only decrypted in memory when authenticating.</span></div></div></div>
+  <div class="tbl-wrap">
+    <table><thead><tr><th>Gmail Account</th><th>Verification</th><th>Availability</th><th>Last Used</th><th></th></tr></thead>
+    <tbody>
+      <tr>
+        <td><span class="mono text-sm"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="225647414a51434e47510f404d56624345474c56510c414d4f52434c5b0c414d4f">someone@email.com</a></span></td>
+        <td><span class="badge b-ok"><span class="dot"></span> verified</span></td>
+        <td><span class="badge b-ok"><span class="dot"></span> available</span></td>
+        <td class="text-xs">Mar 15, 2026</td>
+        <td><div class="flex gap-2"><button class="btn btn-s btn-sm" onclick="nav('gmail-edit')">Edit</button><button class="btn btn-d btn-sm">Remove</button></div></td>
+      </tr>
+      <tr>
+        <td><span class="mono text-sm"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="8eeaebe3e1a3efe9ebe0faceefe9ebe0fafda0ede1e3feefe0f7a0ede1e3">someone@email.com</a></span></td>
+        <td><span class="badge b-ok"><span class="dot"></span> verified</span></td>
+        <td><span class="badge b-ok"><span class="dot"></span> verified</span></td>
+        <td class="text-xs">Mar 14, 2026</td>
+        <td><div class="flex gap-2"><button class="btn btn-s btn-sm" onclick="nav('gmail-edit')">Edit</button><button class="btn btn-d btn-sm">Remove</button></div></td>
+      </tr>
+      <tr>
+        <td><span class="mono text-sm"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="2b585e5b5b44595f0649445f6b4a4c4e455f58054844465b4a455205484446">someone@email.com</a></span></td>
+        <td><span class="badge b-err"><span class="dot"></span> failed to verify</span></td>
+        <td><span class="badge b-gray"><span class="dot"></span> unavailable</span></td>
+        <td class="text-xs">—</td>
+        <td><div class="flex gap-2"><button class="btn btn-s btn-sm" onclick="nav('gmail-edit')">Edit</button><button class="btn btn-d btn-sm">Remove</button></div></td>
+      </tr>
+    </tbody></table>
+    <div class="tbl-foot"><span>3 credentials · Encrypted at rest via AWS KMS · Passwords never shown in plain text</span></div>
+  </div>
+</div>
+
+<!-- GMAIL CREATE -->
+<div class="page" id="p-gmail-create">
+  <div class="bc"><a href="#" onclick="nav('gmail');return false">Gmail Credentials</a><span class="sep">›</span><span class="cur">Add Credential</span></div>
+  <div class="pg-hdr"><div><h1>Add Gmail Credential</h1><div class="pg-sub">Gmail account for project authentication</div></div></div>
+  <div class="card" style="max-width:560px"><div class="card-body">
+    <div class="form-g"><label class="form-l">Gmail Address <span class="req">*</span></label><input class="form-i" type="email" placeholder="bot-name@company-agents.com"></div>
+    <div class="form-g">
+      <label class="form-l">Password <span class="req">*</span></label>
+      <div class="form-pwd-wrap"><input class="form-i" type="password" id="gmail-pwd-create" placeholder="••••••••"><button class="pwd-toggle" onclick="togglePwd('gmail-pwd-create',this)" type="button">👁</button></div>
+      <div class="form-h">🔒 Stored encrypted via AWS KMS. Never displayed after saving.</div>
+    </div>
+    <div class="form-g"><label class="form-l">Confirm Password <span class="req">*</span></label><div class="form-pwd-wrap"><input class="form-i" type="password" id="gmail-pwd2-create" placeholder="••••••••"><button class="pwd-toggle" onclick="togglePwd('gmail-pwd2-create',this)" type="button">👁</button></div></div>
+    <div class="flex gap-3 jc-end mt-6">
+      <button class="btn btn-s btn-lg" onclick="nav('gmail')">Cancel</button>
+      <button class="btn btn-p btn-lg" onclick="nav('gmail')">Save & Verify</button>
+    </div>
+  </div></div>
+</div>
+
+<!-- GMAIL EDIT -->
+<div class="page" id="p-gmail-edit">
+  <div class="bc"><a href="#" onclick="nav('gmail');return false">Gmail Credentials</a><span class="sep">›</span><span class="cur">Edit Credential</span></div>
+  <div class="pg-hdr"><div><h1>Edit Gmail Credential</h1><div class="pg-sub"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="6e1a0b0d061d0f020b1d430c011a2e0f090b001a1d400d01031e0f0017400d0103">someone@email.com</a></div></div></div>
+  <div class="card" style="max-width:560px"><div class="card-body">
+    <div class="form-g"><label class="form-l">Gmail Address</label><input class="form-i" value="techsales-bot@agents.company.com"><div class="form-h">Changing the address will require re-verification.</div></div>
+    <div class="form-g">
+      <label class="form-l">New Password</label>
+      <div class="form-pwd-wrap"><input class="form-i" type="password" id="gmail-pwd-edit" placeholder="Leave blank to keep current password"><button class="pwd-toggle" onclick="togglePwd('gmail-pwd-edit',this)" type="button">👁</button></div>
+      <div class="form-h">🔒 Only fill if updating password. Stored encrypted, never shown.</div>
+    </div>
+    <div class="flex gap-3 jc-b mt-6">
+      <button class="btn btn-d">Remove Credential</button>
+      <div class="flex gap-3"><button class="btn btn-s btn-lg" onclick="nav('gmail')">Cancel</button><button class="btn btn-p btn-lg" onclick="nav('gmail')">Save Changes</button></div>
+    </div>
+  </div></div>
+</div>
+
+<!-- TOKEN USAGE -->
+<div class="page" id="p-tokens">
+  <div class="pg-hdr"><div><h1>Token Usage</h1><div class="pg-sub">Monitor AI token consumption and costs</div></div><div class="pg-actions"><select class="fsel"><option>March 2026</option><option>February 2026</option></select></div></div>
+  <div class="g g3 mb-6">
+    <div class="stat" style="cursor:default"><div class="stat-icon blue">🪙</div><div class="stat-label">Total Tokens</div><div class="stat-val">284,500</div><div class="stat-meta">March 2026</div></div>
+    <div class="stat" style="cursor:default"><div class="stat-icon green">💲</div><div class="stat-label">Estimated Cost</div><div class="stat-val">$14.22</div><div class="stat-meta">March 2026</div></div>
+    <div class="stat" style="cursor:default"><div class="stat-icon amber">📊</div><div class="stat-label">Daily Average</div><div class="stat-val">40,643</div><div class="stat-meta">7 days recorded</div></div>
+  </div>
+  <div class="card mb-6"><div class="card-hdr"><div class="text-md fw-sb">Daily Token Usage</div></div><div class="card-body">
+    <div class="tchart">
+      <div class="tchart-g"><div class="tchart-tip">32,000</div><div class="tchart-bar" style="height:82px"></div><div class="tchart-lbl">Mar 10</div></div>
+      <div class="tchart-g"><div class="tchart-tip">45,000</div><div class="tchart-bar" style="height:116px"></div><div class="tchart-lbl">Mar 11</div></div>
+      <div class="tchart-g"><div class="tchart-tip">28,000</div><div class="tchart-bar" style="height:72px"></div><div class="tchart-lbl">Mar 12</div></div>
+      <div class="tchart-g"><div class="tchart-tip">51,000</div><div class="tchart-bar" style="height:132px"></div><div class="tchart-lbl">Mar 13</div></div>
+      <div class="tchart-g"><div class="tchart-tip">38,000</div><div class="tchart-bar" style="height:98px"></div><div class="tchart-lbl">Mar 14</div></div>
+      <div class="tchart-g"><div class="tchart-tip">62,000</div><div class="tchart-bar" style="height:160px"></div><div class="tchart-lbl">Mar 15</div></div>
+      <div class="tchart-g"><div class="tchart-tip">28,500</div><div class="tchart-bar" style="height:73px"></div><div class="tchart-lbl">Mar 16</div></div>
+    </div>
+  </div></div>
+  <div class="tbl-wrap"><div class="tbl-hdr"><div class="tbl-title">Usage by Project</div></div><table><thead><tr><th>Project</th><th>Sessions</th><th>Q&A Pairs</th><th>Est. Tokens</th></tr></thead><tbody>
+    <tr><td><strong>Acme Corp Sales</strong></td><td>3</td><td>11</td><td class="mono">93,500</td></tr>
+    <tr><td><strong>Global Logistics Demo</strong></td><td>1</td><td>5</td><td class="mono">42,500</td></tr>
+    <tr><td><strong>Internal Training</strong></td><td>0</td><td>0</td><td class="mono">0</td></tr>
+  </tbody></table></div>
+</div>
+
+<!-- AUDIT LOGS -->
+<div class="page" id="p-logs">
+  <div class="pg-hdr"><div><h1>Audit Logs</h1><div class="pg-sub">System activity and change history</div></div></div>
+  <div class="filters"><div class="search-box"><span class="si">🔍</span><input placeholder="Search logs..."></div><select class="fsel"><option>All Actions</option><option>Create</option><option>Update</option><option>Upload</option><option>Delete</option></select><select class="fsel"><option>All Users</option><option>Richie Tan</option><option>Sarah Chen</option></select></div>
+  <div class="tbl-wrap"><table><thead><tr><th style="width:40px"></th><th>Action</th><th>Actor</th><th>Target</th><th>Timestamp</th></tr></thead><tbody>
+    <tr><td style="text-align:center">➕</td><td><strong class="text-p">Agent Created</strong></td><td>Richie Tan</td><td class="mono text-sm">Support Agent</td><td class="text-xs mono text-t">2026-03-16 09:12:05</td></tr>
+    <tr><td style="text-align:center">📤</td><td><strong class="text-p">Document Uploaded</strong></td><td>Richie Tan</td><td class="mono text-sm">Pricing Tier Breakdown.pdf → global-logistics</td><td class="text-xs mono text-t">2026-03-16 08:55:30</td></tr>
+    <tr><td style="text-align:center">🎙️</td><td><strong class="text-p">Session Started</strong></td><td>Sarah Chen</td><td class="mono text-sm">Integration Planning (sess-002)</td><td class="text-xs mono text-t">2026-03-16 10:30:00</td></tr>
+    <tr><td style="text-align:center">✏️</td><td><strong class="text-p">Role Updated</strong></td><td>Richie Tan</td><td class="mono text-sm">TechSales Bot</td><td class="text-xs mono text-t">2026-03-15 16:20:11</td></tr>
+    <tr><td style="text-align:center">👤</td><td><strong class="text-p">User Assigned</strong></td><td>Richie Tan</td><td class="mono text-sm">mike.lee → Global Logistics Demo</td><td class="text-xs mono text-t">2026-03-15 14:00:00</td></tr>
+    <tr><td style="text-align:center">🔑</td><td><strong class="text-p">Gmail Credential Added</strong></td><td>Richie Tan</td><td class="mono text-sm"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="433726202b30222f26306e212c37032224262d37306d202c2e33222d3a6d202c2e">someone@email.com</a></td><td class="text-xs mono text-t">2026-03-10 11:00:00</td></tr>
+  </tbody></table></div>
+</div>
+
+</main>
+</div>
+</div>
+
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+function nav(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const target = document.getElementById('p-' + page);
+  if (target) target.classList.add('active');
+  const navItem = document.querySelector('.nav-item[data-page="' + page + '"]');
+  if (navItem) navItem.classList.add('active');
+}
+document.querySelectorAll('.nav-item[data-page]').forEach(item => {
+  item.addEventListener('click', () => nav(item.dataset.page));
+});
+function switchTab(el, contentId) {
+  el.parentElement.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  el.closest('.page').querySelectorAll('.tab-c').forEach(tc => tc.classList.remove('active'));
+  document.getElementById(contentId).classList.add('active');
+}
+function toggleFolder(id) {
+  const el = document.getElementById(id);
+  const toggleEl = document.getElementById(id + '-toggle');
+  if (el.style.display === 'none') { el.style.display = ''; toggleEl.textContent = '▲ collapse'; }
+  else { el.style.display = 'none'; toggleEl.textContent = '▼ expand'; }
+}
+function togglePwd(id, btn) {
+  const input = document.getElementById(id);
+  if (input.type === 'password') { input.type = 'text'; btn.textContent = '🙈'; }
+  else { input.type = 'password'; btn.textContent = '👁'; }
+}
+const testResponses = [
+  "Based on the configured knowledge base, I can confirm that our platform uses AES-256 encryption at rest via AWS KMS. All keys are rotated annually.",
+  "Our system architecture leverages ECS Fargate for auto-scaling, supporting up to 500 concurrent sessions with sub-3-second latency.",
+  "Integration with Slack is not in the current scope. The architecture supports webhook-based integrations for future implementation.",
+  "For APAC customers, we support ap-southeast-1 (Singapore) and ap-northeast-1 (Tokyo) regions, with ap-south-1 available on request."
+];
+let testIdx = 0;
+function testPrompt(context) {
+  const inputEl = document.querySelector('#test-msgs-' + context).parentElement.querySelector('input');
+  if (!inputEl.value.trim()) return;
+  const msgs = document.getElementById('test-msgs-' + context);
+  const userDiv = document.createElement('div');
+  userDiv.className = 'chat-test-item user'; userDiv.textContent = inputEl.value;
+  msgs.appendChild(userDiv);
+  inputEl.value = '';
+  setTimeout(() => {
+    const aiDiv = document.createElement('div');
+    aiDiv.className = 'chat-test-item ai';
+    const name = context === 'detail' ? 'TechSales Bot' : 'New Agent';
+    aiDiv.innerHTML = '<div class="agent-lbl">' + name + '</div>' + testResponses[testIdx % testResponses.length];
+    testIdx++;
+    msgs.appendChild(aiDiv);
+    msgs.scrollTop = msgs.scrollHeight;
+  }, 600);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+</script>
+</body>
+</html>

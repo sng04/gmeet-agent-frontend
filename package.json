@@ -1,0 +1,9 @@
+{
+  "name": "meetagent-spa",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "npx serve src -l 3000",
+    "build": "echo 'No build step needed for vanilla JS'"
+  }
+}

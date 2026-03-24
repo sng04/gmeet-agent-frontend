@@ -1,0 +1,170 @@
+import { authStore } from './stores/auth.js';
+
+// Public routes (no auth required)
+const publicRoutes = {
+  'login': () => import('./pages/user/Login.js'),
+  'change-password': () => import('./pages/user/ChangePassword.js'),
+  'admin/login': () => import('./pages/admin/Login.js'),
+  'admin/change-password': () => import('./pages/admin/ChangePassword.js'),
+};
+
+const adminRoutes = {
+  '': () => import('./pages/admin/Dashboard.js'),
+  'projects': () => import('./pages/admin/Projects.js'),
+  'project-create': () => import('./pages/admin/ProjectCreate.js'),
+  'project-detail': () => import('./pages/admin/ProjectDetail.js'),
+  'project-edit': () => import('./pages/admin/ProjectEdit.js'),
+  'projects/:id': () => import('./pages/admin/ProjectDetail.js'),
+  'agents': () => import('./pages/admin/Agents.js'),
+  'agent-create': () => import('./pages/admin/AgentCreate.js'),
+  'agent-detail': () => import('./pages/admin/AgentDetail.js'),
+  'agent-edit': () => import('./pages/admin/AgentEdit.js'),
+  'agents/:id': () => import('./pages/admin/AgentDetail.js'),
+  'skills': () => import('./pages/admin/Skills.js'),
+  'skill-create': () => import('./pages/admin/SkillCreate.js'),
+  'gmail': () => import('./pages/admin/GmailCredentials.js'),
+  'gmail-create': () => import('./pages/admin/GmailCreate.js'),
+  'gmail-edit': () => import('./pages/admin/GmailEdit.js'),
+  'qa': () => import('./pages/admin/QAMonitor.js'),
+  'tokens': () => import('./pages/admin/TokenUsage.js'),
+  'logs': () => import('./pages/admin/AuditLogs.js'),
+  'users': () => import('./pages/admin/Users.js'),
+};
+
+const userRoutes = {
+  '': () => import('./pages/user/Dashboard.js'),
+  'project-detail': () => import('./pages/user/ProjectDetail.js'),
+  'project/:id': () => import('./pages/user/ProjectDetail.js'),
+  'live-session': () => import('./pages/user/LiveSession.js'),
+  'live': () => import('./pages/user/LiveSession.js'),
+  'retro-session': () => import('./pages/user/RetroSession.js'),
+  'session/:id': () => import('./pages/user/RetroSession.js'),
+  'session-create': () => import('./pages/user/SessionCreate.js'),
+  'session/create': () => import('./pages/user/SessionCreate.js'),
+  'session-history': () => import('./pages/user/SessionHistory.js'),
+  'kb': () => import('./pages/user/KnowledgeBase.js'),
+};
+
+let currentPath = null;
+let appContainer = null;
+let layoutRendered = false;
+
+function parseHash() {
+  const hash = window.location.hash.slice(1) || '/';
+  return hash.startsWith('/') ? hash.slice(1) : hash;
+}
+
+function matchRoute(path, routes) {
+  for (const [pattern, loader] of Object.entries(routes)) {
+    const paramNames = [];
+    const regexPattern = pattern.replace(/:([^/]+)/g, (_, name) => {
+      paramNames.push(name);
+      return '([^/]+)';
+    });
+    const regex = new RegExp(`^${regexPattern}$`);
+    const match = path.match(regex);
+    if (match) {
+      const params = {};
+      paramNames.forEach((name, i) => { params[name] = match[i + 1]; });
+      return { loader, params };
+    }
+  }
+  return null;
+}
+
+export async function render() {
+  const path = parseHash();
+  
+  // Skip if same path (but allow forced re-render)
+  if (path === currentPath && currentPath !== null) return;
+  currentPath = path;
+
+  const state = authStore.getState();
+  const { isAuthenticated, isAdmin, challenge } = state;
+  
+  console.log('Router state:', { path, isAuthenticated, isAdmin, challenge });
+
+  // Check if it's a public route (login/change-password pages)
+  const publicMatch = matchRoute(path, publicRoutes);
+  
+  if (publicMatch) {
+    // If already authenticated with token and no challenge, redirect to dashboard
+    if (isAuthenticated && !challenge && localStorage.getItem('access_token')) {
+      console.log('Already authenticated, redirecting to dashboard');
+      navigate(isAdmin ? '' : '');
+      return;
+    }
+    
+    // Render public page without layout
+    layoutRendered = false;
+    try {
+      const module = await publicMatch.loader();
+      const Page = module.default || module[Object.keys(module)[0]];
+      appContainer.innerHTML = '';
+      const pageEl = await Page(publicMatch.params);
+      appContainer.appendChild(pageEl);
+    } catch (err) {
+      console.error('Route error:', err);
+      appContainer.innerHTML = `<div class="login-page"><div class="login-card"><h1>Error</h1><p>${err.message}</p></div></div>`;
+    }
+    return;
+  }
+
+  // Protected routes - check authentication via localStorage token
+  const hasToken = !!localStorage.getItem('access_token');
+  if (!hasToken) {
+    console.log('No token, redirecting to login');
+    // Check if path looks like admin route
+    const isAdminPath = path.startsWith('admin') || path === '' && localStorage.getItem('user_role') === 'admin';
+    navigate(isAdminPath ? 'admin/login' : 'login');
+    return;
+  }
+
+  // If has challenge (need to change password), redirect to change password
+  if (challenge === 'NEW_PASSWORD_REQUIRED') {
+    console.log('Has challenge, redirecting to change password');
+    navigate(isAdmin ? 'admin/change-password' : 'change-password');
+    return;
+  }
+
+  // Ensure layout is rendered for protected routes
+  if (!layoutRendered) {
+    const { Layout } = await import('./components/layout/Layout.js');
+    const { el, main } = Layout();
+    appContainer.innerHTML = '';
+    appContainer.appendChild(el);
+    appContainer._mainContainer = main;
+    layoutRendered = true;
+  }
+
+  const mainContainer = appContainer._mainContainer;
+  const routes = isAdmin ? adminRoutes : userRoutes;
+  const matched = matchRoute(path, routes);
+
+  if (!matched) {
+    mainContainer.innerHTML = '<div class="page"><h1>404 - Page Not Found</h1></div>';
+    return;
+  }
+
+  try {
+    const module = await matched.loader();
+    const Page = module.default || module[Object.keys(module)[0]];
+    mainContainer.innerHTML = '';
+    const pageEl = await Page(matched.params);
+    mainContainer.appendChild(pageEl);
+  } catch (err) {
+    console.error('Route error:', err);
+    mainContainer.innerHTML = `<div class="page"><h1>Error loading page</h1><p>${err.message}</p></div>`;
+  }
+}
+
+export function navigate(path) {
+  currentPath = null; // Reset to force re-render
+  window.location.hash = `#/${path}`;
+}
+
+export function initRouter(container) {
+  appContainer = container;
+  window.addEventListener('hashchange', render);
+  render();
+}
