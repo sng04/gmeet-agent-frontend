@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "npx serve src -l 3000",
+    "dev": "npx serve src -l 3000 -s",
     "build": "echo 'No build step needed for vanilla JS'"
   }
 }

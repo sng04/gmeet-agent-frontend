@@ -2,6 +2,7 @@ import { authApi } from '../../api/auth.js';
 import { authStore } from '../../stores/auth.js';
 import { navigate } from '../../router.js';
 import { api } from '../../api/client.js';
+import { decodeJwt } from '../../utils/format.js';
 
 export default async function UserLoginPage() {
   const container = document.createElement('div');
@@ -85,8 +86,28 @@ export default async function UserLoginPage() {
         );
         navigate('change-password');
       } else if (response.data?.access_token) {
-        // Normal login success
-        authStore.setUser({ role: 'user', username, name: username });
+        // Decode JWT to check role
+        const payload = decodeJwt(response.data.access_token);
+        console.log('JWT payload:', payload);
+        
+        const role = payload?.role || payload?.['custom:role'] || payload?.['cognito:groups']?.[0];
+        console.log('Detected role:', role);
+        
+        // Block admin from user portal
+        if (role === 'admin') {
+          throw new Error('Please use Admin Portal to login.');
+        }
+        
+        // Role verified - proceed with login
+        const user = {
+          role: 'user',
+          username,
+          name: payload?.name || username,
+          email: payload?.email,
+          sub: payload?.sub,
+        };
+        
+        authStore.setUser(user);
         authStore.setTokens(response.data);
         api.setToken(response.data.access_token);
         navigate('');

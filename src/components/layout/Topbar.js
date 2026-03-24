@@ -2,6 +2,7 @@ import { authStore } from '../../stores/auth.js';
 import { appStore } from '../../stores/app.js';
 import { authApi } from '../../api/auth.js';
 import { api } from '../../api/client.js';
+import { navigate } from '../../router.js';
 
 export function Topbar() {
   const { user, isAdmin } = authStore.getState();
@@ -45,6 +46,7 @@ export function Topbar() {
   avatarMenu.addEventListener('click', async (e) => {
     const action = e.target.dataset.action;
     if (action === 'logout') {
+      const wasAdmin = isAdmin;
       try {
         await authApi.logout();
       } catch (err) {
@@ -52,7 +54,7 @@ export function Topbar() {
       }
       authStore.logout();
       api.clearTokens();
-      window.location.hash = isAdmin ? '#/admin/login' : '#/login';
+      navigate(wasAdmin ? 'admin/login' : 'login');
     }
   });
 

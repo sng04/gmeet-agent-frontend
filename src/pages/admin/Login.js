@@ -2,6 +2,7 @@ import { authApi } from '../../api/auth.js';
 import { authStore } from '../../stores/auth.js';
 import { navigate } from '../../router.js';
 import { api } from '../../api/client.js';
+import { decodeJwt } from '../../utils/format.js';
 
 export default async function AdminLoginPage() {
   const container = document.createElement('div');
@@ -85,8 +86,24 @@ export default async function AdminLoginPage() {
         );
         navigate('admin/change-password');
       } else if (response.data?.access_token) {
-        // Normal login success
-        authStore.setUser({ role: 'admin', email: username, name: username.split('@')[0] });
+        const payload = decodeJwt(response.data.access_token);
+        console.log('JWT payload:', payload);
+        
+        const role = payload?.role || payload?.['custom:role'] || payload?.['cognito:groups']?.[0];
+        console.log('Detected role:', role);
+        
+        if (role !== 'admin') {
+          throw new Error('Access denied. Admin privileges required.');
+        }
+        
+        const user = {
+          role: 'admin',
+          email: payload?.email || username,
+          name: payload?.name || payload?.email?.split('@')[0] || username.split('@')[0],
+          sub: payload?.sub,
+        };
+        
+        authStore.setUser(user);
         authStore.setTokens(response.data);
         api.setToken(response.data.access_token);
         navigate('');

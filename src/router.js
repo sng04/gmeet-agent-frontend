@@ -127,6 +127,19 @@ export async function render() {
     return;
   }
 
+  // Determine if current path is for admin portal
+  // Note: '' (dashboard) exists in both routes, so check admin-specific routes
+  const isAdminOnlyPath = path.startsWith('admin/') || 
+    (path !== '' && matchRoute(path, adminRoutes) !== null && matchRoute(path, userRoutes) === null);
+  
+  // Role-based access control - only redirect for admin-only routes
+  if (!isAdmin && isAdminOnlyPath) {
+    // User trying to access admin-only routes - redirect to user dashboard
+    console.log('User accessing admin route, redirecting to user dashboard');
+    navigate('');
+    return;
+  }
+
   // Ensure layout is rendered
   if (!layoutRendered) {
     const { Layout } = await import('./components/layout/Layout.js');
@@ -160,6 +173,7 @@ export async function render() {
 
 export function navigate(path) {
   currentPath = null;
+  layoutRendered = false; // Reset layout state for proper re-render
   window.history.pushState({}, '', '/' + path);
   render();
 }
