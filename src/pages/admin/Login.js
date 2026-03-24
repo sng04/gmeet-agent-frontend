@@ -39,7 +39,7 @@ export default async function AdminLoginPage() {
         </button>
       </form>
       <div class="login-footer">
-        <a href="#/login" class="login-link">User Portal Login →</a>
+        <a href="/login" class="login-link">User Portal Login →</a>
       </div>
     </div>
   `;

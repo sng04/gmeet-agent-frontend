@@ -49,9 +49,10 @@ let currentPath = null;
 let appContainer = null;
 let layoutRendered = false;
 
-function parseHash() {
-  const hash = window.location.hash.slice(1) || '/';
-  return hash.startsWith('/') ? hash.slice(1) : hash;
+function parsePath() {
+  // Get pathname without leading slash
+  const path = window.location.pathname.slice(1);
+  return path;
 }
 
 function matchRoute(path, routes) {
@@ -73,9 +74,9 @@ function matchRoute(path, routes) {
 }
 
 export async function render() {
-  const path = parseHash();
+  const path = parsePath();
   
-  // Skip if same path (but allow forced re-render)
+  // Skip if same path
   if (path === currentPath && currentPath !== null) return;
   currentPath = path;
 
@@ -84,14 +85,14 @@ export async function render() {
   
   console.log('Router state:', { path, isAuthenticated, isAdmin, challenge });
 
-  // Check if it's a public route (login/change-password pages)
+  // Check if it's a public route
   const publicMatch = matchRoute(path, publicRoutes);
   
   if (publicMatch) {
-    // If already authenticated with token and no challenge, redirect to dashboard
+    // If already authenticated, redirect to dashboard
     if (isAuthenticated && !challenge && localStorage.getItem('access_token')) {
       console.log('Already authenticated, redirecting to dashboard');
-      navigate(isAdmin ? '' : '');
+      navigate('');
       return;
     }
     
@@ -110,24 +111,23 @@ export async function render() {
     return;
   }
 
-  // Protected routes - check authentication via localStorage token
+  // Protected routes - check authentication
   const hasToken = !!localStorage.getItem('access_token');
   if (!hasToken) {
     console.log('No token, redirecting to login');
-    // Check if path looks like admin route
-    const isAdminPath = path.startsWith('admin') || path === '' && localStorage.getItem('user_role') === 'admin';
+    const isAdminPath = path.startsWith('admin') || (path === '' && localStorage.getItem('user_role') === 'admin');
     navigate(isAdminPath ? 'admin/login' : 'login');
     return;
   }
 
-  // If has challenge (need to change password), redirect to change password
+  // If has challenge, redirect to change password
   if (challenge === 'NEW_PASSWORD_REQUIRED') {
     console.log('Has challenge, redirecting to change password');
     navigate(isAdmin ? 'admin/change-password' : 'change-password');
     return;
   }
 
-  // Ensure layout is rendered for protected routes
+  // Ensure layout is rendered
   if (!layoutRendered) {
     const { Layout } = await import('./components/layout/Layout.js');
     const { el, main } = Layout();
@@ -159,12 +159,24 @@ export async function render() {
 }
 
 export function navigate(path) {
-  currentPath = null; // Reset to force re-render
-  window.location.hash = `#/${path}`;
+  currentPath = null;
+  window.history.pushState({}, '', '/' + path);
+  render();
 }
 
 export function initRouter(container) {
   appContainer = container;
-  window.addEventListener('hashchange', render);
+  window.addEventListener('popstate', render);
+  
+  // Intercept link clicks for SPA navigation
+  document.addEventListener('click', (e) => {
+    const link = e.target.closest('a');
+    if (link && link.href.startsWith(window.location.origin) && !link.hasAttribute('data-external')) {
+      e.preventDefault();
+      const path = link.pathname.slice(1);
+      navigate(path);
+    }
+  });
+  
   render();
 }
