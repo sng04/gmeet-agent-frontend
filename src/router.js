@@ -82,15 +82,23 @@ export async function render() {
 
   const state = authStore.getState();
   const { isAuthenticated, isAdmin, challenge } = state;
+  const hasToken = !!localStorage.getItem('access_token');
   
-  console.log('Router state:', { path, isAuthenticated, isAdmin, challenge });
+  console.log('Router state:', { path, isAuthenticated, isAdmin, challenge, hasToken });
 
   // Check if it's a public route
   const publicMatch = matchRoute(path, publicRoutes);
   
   if (publicMatch) {
-    // If already authenticated, redirect to dashboard
-    if (isAuthenticated && !challenge && localStorage.getItem('access_token')) {
+    // Special handling for change-password routes - need active challenge
+    if ((path === 'change-password' || path === 'admin/change-password') && challenge !== 'NEW_PASSWORD_REQUIRED') {
+      console.log('No active password challenge, redirecting');
+      navigate(hasToken ? '' : (path.startsWith('admin') ? 'admin/login' : 'login'));
+      return;
+    }
+    
+    // If already authenticated (and no challenge), redirect to dashboard
+    if (isAuthenticated && !challenge && hasToken) {
       console.log('Already authenticated, redirecting to dashboard');
       navigate('');
       return;
@@ -112,7 +120,6 @@ export async function render() {
   }
 
   // Protected routes - check authentication
-  const hasToken = !!localStorage.getItem('access_token');
   if (!hasToken) {
     console.log('No token, redirecting to login');
     const isAdminPath = path.startsWith('admin') || (path === '' && localStorage.getItem('user_role') === 'admin');
@@ -140,6 +147,17 @@ export async function render() {
     return;
   }
 
+  // Check if route exists before rendering layout
+  const routes = isAdmin ? adminRoutes : userRoutes;
+  const matched = matchRoute(path, routes);
+
+  // Handle 404 - redirect to dashboard instead of showing error
+  if (!matched) {
+    console.log('Route not found, redirecting to dashboard');
+    navigate('');
+    return;
+  }
+
   // Ensure layout is rendered
   if (!layoutRendered) {
     const { Layout } = await import('./components/layout/Layout.js');
@@ -151,13 +169,6 @@ export async function render() {
   }
 
   const mainContainer = appContainer._mainContainer;
-  const routes = isAdmin ? adminRoutes : userRoutes;
-  const matched = matchRoute(path, routes);
-
-  if (!matched) {
-    mainContainer.innerHTML = '<div class="page"><h1>404 - Page Not Found</h1></div>';
-    return;
-  }
 
   try {
     const module = await matched.loader();
@@ -169,11 +180,9 @@ export async function render() {
     console.error('Route error:', err);
     mainContainer.innerHTML = `<div class="page"><h1>Error loading page</h1><p>${err.message}</p></div>`;
   }
-}
-
-export function navigate(path) {
+}export function navigate(path) {
   currentPath = null;
-  layoutRendered = false; // Reset layout state for proper re-render
+  layoutRendered = false;
   window.history.pushState({}, '', '/' + path);
   render();
 }
@@ -182,7 +191,6 @@ export function initRouter(container) {
   appContainer = container;
   window.addEventListener('popstate', render);
   
-  // Intercept link clicks for SPA navigation
   document.addEventListener('click', (e) => {
     const link = e.target.closest('a');
     if (link && link.href.startsWith(window.location.origin) && !link.hasAttribute('data-external')) {
