@@ -273,6 +273,53 @@ tr:hover td { background: var(--gray-25); }
 .tab-c.active { display: block; }
 
 /* Toggle */
+.toggle-wrap {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.toggle-wrap input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-wrap .toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--gray-300);
+  transition: 0.2s;
+  border-radius: 24px;
+}
+
+.toggle-wrap .toggle-slider:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: 0.2s;
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(16,24,40,.2);
+}
+
+.toggle-wrap input:checked + .toggle-slider {
+  background-color: var(--ok-500);
+}
+
+.toggle-wrap input:checked + .toggle-slider:before {
+  transform: translateX(20px);
+}
+
 .toggle-row {
   display: flex;
   align-items: center;
@@ -1120,4 +1167,67 @@ tr:hover td { background: var(--gray-25); }
 .loading-text {
   font-size: 13px;
   color: var(--gray-500);
+}
+
+/* Pool Table (expandable nested table) */
+.pool-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.pool-table th,
+.pool-table td {
+  padding: 8px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--gray-100);
+}
+
+.pool-table th {
+  background: var(--gray-100);
+  font-weight: 500;
+  font-size: 11px;
+  text-transform: uppercase;
+  color: var(--gray-500);
+}
+
+.expand-row td {
+  border-top: none;
+}
+
+.expand-icon {
+  display: inline-block;
+  font-size: 10px;
+  transition: transform 0.2s;
+}
+
+/* Alert */
+.alert {
+  border-radius: 8px;
+  padding: 12px 20px;
+  margin-bottom: 20px;
+}
+
+.alert-warn {
+  background: var(--warn-50);
+  border: 1px solid var(--warn-100);
+  color: var(--warn-700);
+}
+
+.alert-info {
+  background: var(--pri-50);
+  border: 1px solid var(--pri-100);
+  color: var(--pri-700);
+}
+
+.alert-error {
+  background: var(--err-50);
+  border: 1px solid var(--err-100);
+  color: var(--err-700);
+}
+
+.alert-success {
+  background: var(--ok-50);
+  border: 1px solid var(--ok-100);
+  color: var(--ok-700);
 }
