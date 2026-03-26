@@ -8,7 +8,7 @@
     </div>
 
     <!-- Live Widget (inlined) -->
-    <div class="live-widget mb-6" data-bind="liveWidget">
+    <div class="live-widget mb-6" data-bind="liveWidget" style="display:none">
       <div class="flex items-c jc-b">
         <div>
           <div class="live-badge-anim mb-4"><span class="live-dot-anim"></span>LIVE</div>
@@ -26,10 +26,24 @@
       </div>
     </div>
 
-    <!-- Project Cards Grid -->
-    <div class="g g2 mb-6" data-bind="projectsGrid"></div>
+    <!-- Loading State -->
+    <div data-bind="pageLoading">
+      <div class="loading">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Loading projects...</div>
+      </div>
+    </div>
 
-    <!-- Sessions Table -->
-    <div data-bind="sessionsTable"></div>
+    <!-- Content (hidden by default) -->
+    <div data-bind="pageContent" style="display:none">
+      <!-- Project Cards Grid -->
+      <div class="g g2 mb-6" data-bind="projectsGrid"></div>
+
+      <!-- Sessions Table -->
+      <div data-bind="sessionsTable"></div>
+    </div>
+
+    <!-- Error State -->
+    <div data-bind="pageError" style="display:none"></div>
   </div>
 </template>

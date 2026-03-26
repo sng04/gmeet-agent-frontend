@@ -3,6 +3,7 @@ import { navigate } from '../../router.js';
 import { botCredentialApi } from '../../api/botCredential.js';
 import { botPoolApi } from '../../api/botPool.js';
 import { getVerificationBadge } from '../../components/ui/Badge.js';
+import { showLoading, hideLoading } from '../../components/ui/Loading.js';
 
 export default async function GmailEditController() {
   const urlParams = new URLSearchParams(window.location.search);
@@ -153,8 +154,9 @@ export default async function GmailEditController() {
   }
 
   async function loadCredential() {
-    const cardLoading = el.querySelector('[data-bind="cardLoading"]');
-    const cardContent = el.querySelector('[data-bind="cardContent"]');
+    const pageLoading = el.querySelector('[data-bind="pageLoading"]');
+    const pageContent = el.querySelector('[data-bind="pageContent"]');
+    const pageError = el.querySelector('[data-bind="pageError"]');
     
     try {
       const response = await botCredentialApi.get(credentialId);
@@ -164,10 +166,12 @@ export default async function GmailEditController() {
       renderForm();
       
       // Hide loading, show content
-      cardLoading.style.display = 'none';
-      cardContent.style.display = 'block';
+      pageLoading.style.display = 'none';
+      pageContent.style.display = 'block';
     } catch (err) {
-      cardLoading.querySelector('.card-body').innerHTML = `
+      pageLoading.style.display = 'none';
+      pageError.style.display = 'block';
+      pageError.innerHTML = `
         <div class="empty">
           <div class="empty-icon">⚠️</div>
           <div class="empty-title">Failed to load credential</div>
@@ -205,6 +209,7 @@ export default async function GmailEditController() {
         return;
       }
 
+      showLoading('Saving changes...');
       try {
         await botCredentialApi.update(credentialId, { warm_pool_size: newWarmPoolSize });
 
@@ -225,6 +230,7 @@ export default async function GmailEditController() {
         errorMsg.textContent = err.message || 'Failed to update';
         errorMsg.style.display = 'block';
       } finally {
+        hideLoading();
         saveBtn.disabled = false;
         saveBtn.textContent = 'Save Changes';
       }
@@ -249,6 +255,7 @@ export default async function GmailEditController() {
       }
 
       saveBtn.textContent = 'Verifying...';
+      showLoading('Verifying credential...');
 
       try {
         await botCredentialApi.update(credentialId, {
@@ -258,8 +265,10 @@ export default async function GmailEditController() {
         });
 
         // Langsung ke list, polling akan dilakukan di sana
+        hideLoading();
         navigate('gmail');
       } catch (err) {
+        hideLoading();
         errorMsg.textContent = err.message || 'Failed to update';
         errorMsg.style.display = 'block';
         saveBtn.disabled = false;

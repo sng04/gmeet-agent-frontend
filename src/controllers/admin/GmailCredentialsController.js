@@ -1,6 +1,7 @@
 import { loadTemplate } from '../../utils/template.js';
 import { Button } from '../../components/ui/Button.js';
 import { Alert } from '../../components/ui/Alert.js';
+import { ConfirmDialog } from '../../components/ui/ConfirmDialog.js';
 import { getVerificationBadge, getContainerStatusBadge } from '../../components/ui/Badge.js';
 import { navigate } from '../../router.js';
 import { botCredentialApi } from '../../api/botCredential.js';
@@ -23,7 +24,7 @@ export default async function GmailCredentialsController(params) {
   );
 
   let credentials = [];
-  let pollingIntervals = new Map(); // Track polling for validating credentials
+  let pollingIntervals = new Map(); 
 
   // Cleanup polling on page leave
   function cleanup() {
@@ -104,15 +105,14 @@ export default async function GmailCredentialsController(params) {
     pollingIntervals.set(credentialId, intervalId);
   }
 
-  async function handleDelete(credentialId, email) {
-    if (!confirm(`Are you sure you want to remove credential "${email}"?`)) return;
-
-    try {
-      await botCredentialApi.delete(credentialId);
-      await loadCredentials();
-    } catch (err) {
-      alert(`Failed to delete: ${err.message}`);
-    }
+  function handleDelete(credentialId, email) {
+    ConfirmDialog({
+      title: 'Delete Credential',
+      message: `Are you sure you want to remove credential <strong>${email}</strong>?`,
+      loadingMessage: 'Removing credential...',
+      onConfirm: () => botCredentialApi.delete(credentialId),
+      onSuccess: loadCredentials
+    });
   }
 
   async function toggleExpand(credentialId, expandRow) {
