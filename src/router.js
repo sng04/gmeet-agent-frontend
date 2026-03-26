@@ -173,6 +173,13 @@ export async function render() {
   try {
     const module = await matched.loader();
     const Page = module.default || module[Object.keys(module)[0]];
+    
+    // Cleanup previous page if it has cleanup function
+    const prevPage = mainContainer.firstElementChild;
+    if (prevPage && prevPage._cleanup) {
+      prevPage._cleanup();
+    }
+    
     mainContainer.innerHTML = '';
     const pageEl = await Page(matched.params);
     mainContainer.appendChild(pageEl);
@@ -182,7 +189,6 @@ export async function render() {
   }
 }export function navigate(path) {
   currentPath = null;
-  layoutRendered = false;
   window.history.pushState({}, '', '/' + path);
   render();
 }

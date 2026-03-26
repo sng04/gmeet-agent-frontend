@@ -29,28 +29,63 @@ Example: `https://abc123.execute-api.ap-southeast-1.amazonaws.com/dev`
 
 ```
 ┌─────────────┐     ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│   Create    │────▶│   Email     │────▶│   Verify    │────▶│   Active    │
-│  Credential │     │   Sent      │     │   Email     │     │   Ready     │
+│   Create    │────▶│  Validating │────▶│  Verified   │────▶│  Auto Start │
+│  Credential │     │   (SMTP)    │     │  + Active   │     │  Warm Pool  │
 └─────────────┘     └─────────────┘     └─────────────┘     └─────────────┘
-       │                                                           │
-       │                                                           ▼
-       │                                                    ┌─────────────┐
-       │                                                    │  Assign to  │
-       │                                                    │   Project   │
-       │                                                    └─────────────┘
-       │                                                           │
-       ▼                                                           ▼
-┌─────────────┐                                             ┌─────────────┐
-│  not_verified │                                           │  Start Warm │
-│  (inactive)   │                                           │    Pool     │
-└─────────────┘                                             └─────────────┘
+                           │                                       │
+                           │ (invalid)                             ▼
+                           ▼                                ┌─────────────┐
+                    ┌──────────────────┐                    │  Ready for  │
+                    │ verification_    │                    │   Meeting   │
+                    │ failed + inactive│                    └─────────────┘
+                    │ (NO warm pool)   │
+                    └──────────────────┘
+                           │
+                           │ (edit email/password to retry)
+                           ▼
+                    ┌──────────────────┐
+                    │  Re-validating   │───────▶ (back to Validating)
+                    └──────────────────┘
 ```
+
+### Verification Flow (Async SMTP Validation)
+
+1. Admin creates credential via `POST /bot-credentials`
+2. Backend validates input (email format, password not empty, warm_pool_size >= 0)
+3. Backend saves credential with `verification_status: "validating"`, `available_status: "inactive"`
+4. EventBridge triggers async SMTP validation worker
+5. Worker attempts SMTP login with email/password
+6. **If valid:**
+   - Status updated to `verification_status: "verified"`, `available_status: "active"`
+   - Frontend detects verified status via polling
+   - **Frontend MUST auto-trigger `POST /warm-pool/start`** for this credential
+7. **If invalid:**
+   - Status updated to `verification_status: "verification_failed"`, `available_status: "inactive"`
+   - **DO NOT start warm pool**
+   - Admin can edit email/password to retry verification
+8. Frontend polls `GET /bot-credentials/{id}/verify` to check status
+9. If failed, admin opens Edit modal to update email/password and retry
+
+### Important Flow Rules
+
+| Verification Status | Available Status | Warm Pool | Edit Modal Fields |
+|---------------------|------------------|-----------|-------------------|
+| `validating` | `inactive` | ❌ Don't start | N/A (wait for result) |
+| `verified` | `active` | ✅ Auto-start | Only `warm_pool_size` |
+| `verification_failed` | `inactive` | ❌ Don't start | `email`, `password` (retry) |
+
+**Key Points:**
+- `available_status` is **automatically** set by backend based on verification result
+- **No toggle** for active/inactive - status is determined by verification
+- Warm pool only starts for **verified + active** credentials
+- Edit behavior differs based on verification status
 
 ### Status Fields
 
 | Field | Values | Description |
 |-------|--------|-------------|
-| `verification_status` | `not_verified`, `verified` | Email verification state |
+| `verification_status` | `validating`, `verified`, `verification_failed` | SMTP validation state |
+| `verification_error` | string | Error message when verification_failed |
 | `available_status` | `inactive`, `active` | Whether credential can be used |
 
 ---
@@ -62,7 +97,7 @@ Example: `https://abc123.execute-api.ap-southeast-1.amazonaws.com/dev`
 #### 1. Create Bot Credential
 **POST** `/bot-credentials`
 
-Creates a new bot credential and sends verification email.
+Creates a new bot credential and triggers async SMTP validation.
 
 **Headers:**
 ```
@@ -80,20 +115,34 @@ Authorization: Bearer {admin_access_token}
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `email` | string | Yes | Bot account email |
-| `password` | string | Yes | Bot account password (hyphens auto-removed) |
-| `warm_pool_size` | integer | No | Number of warm containers (default: 1) |
+| `email` | string | Yes | Bot account email (valid email format) |
+| `password` | string | Yes | Bot account password (cannot be empty, hyphens auto-removed) |
+| `warm_pool_size` | integer | No | Number of warm containers (default: 1, min: 0) |
+
+**Input Validation:**
+- Email: Must be valid email format (regex validated)
+- Password: Cannot be empty or whitespace only
+- warm_pool_size: Must be non-negative integer (>= 0)
+
+**Supported Email Providers:**
+- Gmail (`@gmail.com`, `@googlemail.com`) - requires App Password if 2FA enabled
+- Google Workspace (custom domains with Google MX records)
+- Outlook (`@outlook.com`, `@hotmail.com`, `@live.com`) - requires App Password if 2FA enabled
+- Microsoft 365 (custom domains with Microsoft MX records)
+- Yahoo (`@yahoo.com`)
+- iCloud (`@icloud.com`, `@me.com`)
+- Zoho (`@zoho.com`)
 
 **Success Response (200):**
 ```json
 {
   "statusCode": 200,
   "status": true,
-  "message": "Bot credential created successfully. Verification email sent.",
+  "message": "Bot credential created. Validating email credentials...",
   "data": {
     "credential_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
     "email": "bot@example.com",
-    "verification_status": "not_verified",
+    "verification_status": "validating",
     "available_status": "inactive",
     "warm_pool_size": 2,
     "created_at": "2024-01-15T10:30:00.000000+00:00",
@@ -103,7 +152,7 @@ Authorization: Bearer {admin_access_token}
 ```
 
 **Error Responses:**
-- `400`: Missing required fields (email, password)
+- `400`: Missing required fields / Invalid email format / Password cannot be empty / Invalid warm_pool_size
 - `401`: Unauthorized (not admin)
 - `409`: Bot credential with email already exists
 - `500`: Internal server error
@@ -217,10 +266,16 @@ Authorization: Bearer {admin_access_token}
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `email` | string | New email (triggers re-verification) |
-| `password` | string | New password |
+| `email` | string | New email (valid format, triggers re-verification) |
+| `password` | string | New password (cannot be empty, triggers re-verification) |
 | `available_status` | string | `active` or `inactive` |
-| `warm_pool_size` | integer | Number of warm containers |
+| `warm_pool_size` | integer | Number of warm containers (>= 0) |
+
+**Input Validation:**
+- Email: Must be valid email format (regex validated)
+- Password: Cannot be empty or whitespace only
+- warm_pool_size: Must be non-negative integer (>= 0)
+- available_status: Must be "active" or "inactive"
 
 **Success Response (200):**
 ```json
@@ -241,7 +296,7 @@ Authorization: Bearer {admin_access_token}
 ```
 
 **Error Responses:**
-- `400`: No update data provided / Invalid available_status / Invalid warm_pool_size
+- `400`: No update data provided / Invalid email format / Password cannot be empty / Invalid available_status / Invalid warm_pool_size
 - `401`: Unauthorized (not admin)
 - `404`: Bot credential not found
 - `409`: Bot credential with email already exists
@@ -277,22 +332,36 @@ Authorization: Bearer {admin_access_token}
 
 ---
 
-#### 6. Verify Bot Credential Email
-**GET** `/bot-credentials/{credentialId}/verify?token={token}`
+#### 6. Check Verification Status
+**GET** `/bot-credentials/{credentialId}/verify`
 
-Public endpoint (no auth) - accessed via email link.
+Returns current verification status. Frontend should poll this endpoint after creating a credential.
 
-**Query Parameters:**
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `token` | string | Yes | Verification token from email |
+**Headers:**
+```
+Authorization: Bearer {admin_access_token}
+```
 
-**Success Response (200):**
+**Success Response (200) - Validating:**
 ```json
 {
   "statusCode": 200,
   "status": true,
-  "message": "Email verified successfully",
+  "message": "Validation in progress...",
+  "data": {
+    "credential_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "email": "bot@example.com",
+    "verification_status": "validating"
+  }
+}
+```
+
+**Success Response (200) - Verified:**
+```json
+{
+  "statusCode": 200,
+  "status": true,
+  "message": "Email credentials verified successfully",
   "data": {
     "credential_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
     "email": "bot@example.com",
@@ -301,8 +370,24 @@ Public endpoint (no auth) - accessed via email link.
 }
 ```
 
+**Success Response (200) - Verification Failed:**
+```json
+{
+  "statusCode": 200,
+  "status": true,
+  "message": "Email credentials validation failed",
+  "data": {
+    "credential_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "email": "bot@example.com",
+    "verification_status": "verification_failed",
+    "verification_error": "Invalid email or password. For Gmail/Outlook, use App Password if 2FA is enabled."
+  }
+}
+```
+
 **Error Responses:**
-- `400`: Verification token is required / Invalid or expired token
+- `400`: Credential ID is required
+- `401`: Unauthorized (not admin)
 - `404`: Bot credential not found
 - `500`: Internal server error
 
@@ -347,6 +432,7 @@ Authorization: Bearer {admin_access_token}
         "task_arn": "arn:aws:ecs:ap-southeast-1:123456789:task/cluster/abc123def456",
         "status": "idle",
         "current_session_id": null,
+        "current_session_name": null,
         "registered_at": "2024-01-15T10:30:00.000000+00:00",
         "last_heartbeat": "2024-01-15T10:35:00.000000+00:00"
       },
@@ -356,6 +442,7 @@ Authorization: Bearer {admin_access_token}
         "task_arn": "arn:aws:ecs:ap-southeast-1:123456789:task/cluster/xyz789ghi012",
         "status": "busy",
         "current_session_id": "session-123",
+        "current_session_name": "Weekly Team Standup",
         "registered_at": "2024-01-15T10:30:00.000000+00:00",
         "last_heartbeat": "2024-01-15T10:40:00.000000+00:00"
       }
@@ -381,7 +468,7 @@ Authorization: Bearer {admin_access_token}
 ---
 
 #### 8. Start Warm Pool
-**POST** `/bot-pool/start`
+**POST** `/warm-pool/start`
 
 Starts warm pool containers for credentials.
 
@@ -433,7 +520,7 @@ Authorization: Bearer {admin_access_token}
 ---
 
 #### 9. Stop Warm Pool
-**POST** `/bot-pool/stop`
+**POST** `/warm-pool/stop`
 
 Stops warm pool containers. Only stops idle containers.
 
@@ -492,11 +579,11 @@ Authorization: Bearer {admin_access_token}
 - Search/filter bar
 - Credentials table with columns:
   - Email
-  - Verification Status (badge)
-  - Available Status (toggle)
+  - Verification Status (badge) - shows validating/verified/failed
+  - Status (text, auto-determined) - Active or Inactive based on verification
   - Warm Pool Size
-  - Pool Status (idle/busy/total)
-  - Actions (View, Edit, Delete)
+  - Pool Status (idle/busy/total) - only shown for verified credentials
+  - Actions (View Pool, Edit, Delete)
 - Pagination
 
 **Table Structure:**
@@ -513,10 +600,11 @@ Authorization: Bearer {admin_access_token}
     </tr>
   </thead>
   <tbody>
+    <!-- Verified credential row -->
     <tr>
       <td>bot@example.com</td>
-      <td><span class="badge badge-success">Verified</span></td>
-      <td><toggle checked /></td>
+      <td><span class="badge b-ok">Verified</span></td>
+      <td><span class="text-green">Active</span></td>
       <td>2</td>
       <td>
         <span class="text-green">2 idle</span> / 
@@ -524,7 +612,34 @@ Authorization: Bearer {admin_access_token}
       </td>
       <td>
         <button>View Pool</button>
-        <button>Edit</button>
+        <button>Edit</button>  <!-- Only warm_pool_size editable -->
+        <button>Delete</button>
+      </td>
+    </tr>
+    <!-- Validating credential row -->
+    <tr>
+      <td>pending@example.com</td>
+      <td><span class="badge b-warn">Validating...</span></td>
+      <td><span class="text-muted">Inactive</span></td>
+      <td>1</td>
+      <td>-</td>
+      <td>
+        <button disabled>Edit</button>
+        <button>Delete</button>
+      </td>
+    </tr>
+    <!-- Failed verification row -->
+    <tr>
+      <td>
+        invalid@example.com
+        <div class="text-red text-sm">Invalid credentials</div>
+      </td>
+      <td><span class="badge b-err">Failed</span></td>
+      <td><span class="text-muted">Inactive</span></td>
+      <td>1</td>
+      <td>-</td>
+      <td>
+        <button>Edit</button>  <!-- email + password editable for retry -->
         <button>Delete</button>
       </td>
     </tr>
@@ -535,29 +650,31 @@ Authorization: Bearer {admin_access_token}
 **Flow:**
 1. On mount, call `GET /bot-credentials`
 2. Display credentials in table
-3. Add Credential: Open modal, call `POST /bot-credentials`
-4. Edit Credential: Open modal, call `PUT /bot-credentials/{id}`
+3. Add Credential: Open create modal, call `POST /bot-credentials`, poll verification
+4. Edit Credential: 
+   - If `verified`: Open modal with only `warm_pool_size` editable
+   - If `verification_failed`: Open modal with `email` + `password` editable (retry flow)
 5. Delete Credential: Confirm dialog, call `DELETE /bot-credentials/{id}`
-6. Toggle Status: Call `PUT /bot-credentials/{id}` with `available_status`
+6. **NO toggle** - status is auto-determined by verification result
 
 ---
 
 ### 2. Create/Edit Bot Credential Modal
 
 **Components:**
-- Form fields:
-  - Email (required)
-  - Password (required for create, optional for edit)
-  - Warm Pool Size (number input, min: 1)
-  - Available Status (toggle, edit only)
+- Form fields (varies by mode):
+  - **Create Mode**: Email (required), Password (required), Warm Pool Size (number input, min: 0)
+  - **Edit Mode (verified)**: Only Warm Pool Size editable
+  - **Edit Mode (verification_failed)**: Email, Password editable (for retry)
 - Submit button
 - Cancel button
 - Error message display
+- Verification status indicator (during polling)
 
-**Form Validation:**
+**Form Validation (handled by backend, but frontend can pre-validate):**
 - Email: Valid email format
-- Password: Required for create
-- Warm Pool Size: Positive integer
+- Password: Cannot be empty
+- Warm Pool Size: Non-negative integer (>= 0)
 
 **Create Flow:**
 ```javascript
@@ -565,37 +682,148 @@ async function createCredential(data) {
   const response = await apiCall('POST', '/bot-credentials', {
     email: data.email,
     password: data.password,
-    warm_pool_size: data.warmPoolSize || 1
+    warm_pool_size: data.warmPoolSize ?? 1
   });
   
   if (response.status) {
-    showSuccess('Credential created. Verification email sent.');
+    showInfo('Credential created. Validating email credentials...');
+    // Start polling for verification status
+    pollVerificationStatus(response.data.credential_id);
+  }
+}
+
+// Poll verification status every 2 seconds
+async function pollVerificationStatus(credentialId, maxAttempts = 30) {
+  let attempts = 0;
+  
+  const poll = async () => {
+    attempts++;
+    try {
+      const response = await apiCall('GET', `/bot-credentials/${credentialId}/verify`);
+      
+      if (response.data.verification_status === 'verified') {
+        showSuccess('Email credentials verified successfully!');
+        
+        // AUTO-START WARM POOL after verification success
+        await startWarmPoolForCredential(credentialId);
+        
+        refreshList();
+        closeModal();
+        return;
+      }
+      
+      if (response.data.verification_status === 'verification_failed') {
+        const errorMsg = response.data.verification_error || 'Verification failed';
+        showError(`Verification failed: ${errorMsg}`);
+        // DO NOT start warm pool
+        // Close modal, user can click Edit to retry
+        refreshList();
+        closeModal();
+        return;
+      }
+      
+      if (response.data.verification_status === 'validating' && attempts < maxAttempts) {
+        setTimeout(poll, 2000);
+        return;
+      }
+      
+      // Timeout after max attempts
+      showWarning('Verification is taking longer than expected. Please check back later.');
+      refreshList();
+      closeModal();
+    } catch (error) {
+      showError('Error checking verification status');
+      throw error;
+    }
+  };
+  
+  poll();
+}
+
+// Auto-start warm pool after successful verification
+async function startWarmPoolForCredential(credentialId) {
+  try {
+    const response = await apiCall('POST', '/warm-pool/start', {
+      credential_ids: [credentialId]
+    });
+    if (response.status && response.data.started > 0) {
+      showInfo(`Started ${response.data.started} warm pool container(s)`);
+    }
+  } catch (error) {
+    console.error('Failed to start warm pool:', error);
+    // Don't block the flow, warm pool can be started manually later
+  }
+}
+```
+
+**Edit Flow (Verified Credential - only warm_pool_size):**
+```javascript
+async function updateVerifiedCredential(credentialId, warmPoolSize) {
+  const response = await apiCall('PUT', `/bot-credentials/${credentialId}`, {
+    warm_pool_size: warmPoolSize
+  });
+  
+  if (response.status) {
+    showSuccess('Warm pool size updated successfully.');
     refreshList();
     closeModal();
   }
 }
 ```
 
-**Edit Flow:**
+**Edit Flow (Failed Credential - retry verification):**
 ```javascript
-async function updateCredential(credentialId, data) {
+async function retryVerification(credentialId, email, password) {
   const payload = {};
-  if (data.email) payload.email = data.email;
-  if (data.password) payload.password = data.password;
-  if (data.warmPoolSize) payload.warm_pool_size = data.warmPoolSize;
-  if (data.availableStatus !== undefined) {
-    payload.available_status = data.availableStatus ? 'active' : 'inactive';
-  }
+  if (email) payload.email = email;
+  if (password) payload.password = password;
   
   const response = await apiCall('PUT', `/bot-credentials/${credentialId}`, payload);
   
   if (response.status) {
-    const message = response.message.includes('Verification') 
-      ? 'Credential updated. Please verify new email.'
-      : 'Credential updated successfully.';
-    showSuccess(message);
-    refreshList();
-    closeModal();
+    showInfo('Re-validating email credentials...');
+    // Start polling for verification status
+    pollVerificationStatus(credentialId);
+  }
+}
+```
+
+**Edit Modal Rendering Logic:**
+```javascript
+function renderEditModal(credential) {
+  if (credential.verification_status === 'verified') {
+    // Only show warm_pool_size field
+    return `
+      <div class="form-g">
+        <label class="form-l">Email</label>
+        <input type="text" value="${credential.email}" disabled class="form-i" />
+        <small class="text-muted">Email cannot be changed for verified credentials</small>
+      </div>
+      <div class="form-g">
+        <label class="form-l">Warm Pool Size</label>
+        <input type="number" name="warmPoolSize" value="${credential.warm_pool_size}" min="0" class="form-i" />
+      </div>
+    `;
+  } else if (credential.verification_status === 'verification_failed') {
+    // Show email + password fields for retry
+    return `
+      <div class="alert alert-warning">
+        <strong>Verification Failed:</strong> ${credential.verification_error || 'Invalid credentials'}
+        <br>Update email/password below to retry verification.
+      </div>
+      <div class="form-g">
+        <label class="form-l">Email</label>
+        <input type="email" name="email" value="${credential.email}" class="form-i" />
+      </div>
+      <div class="form-g">
+        <label class="form-l">Password</label>
+        <input type="password" name="password" placeholder="Enter new password" class="form-i" />
+      </div>
+      <div class="form-g">
+        <label class="form-l">Warm Pool Size</label>
+        <input type="number" name="warmPoolSize" value="${credential.warm_pool_size}" min="0" class="form-i" />
+      </div>
+    `;
   }
 }
 ```
@@ -804,9 +1032,14 @@ async function apiCall(method, url, body = null) {
   color: #065F46;
 }
 
-.badge-not-verified {
-  background: #FEF3C7;
-  color: #92400E;
+.badge-validating {
+  background: #DBEAFE;
+  color: #1E40AF;
+}
+
+.badge-verification-failed {
+  background: #FEE2E2;
+  color: #991B1B;
 }
 
 /* Container Status */
@@ -831,20 +1064,39 @@ async function apiCall(method, url, body = null) {
 }
 ```
 
+### Summary of Updated Flow
+
+**Create Credential Flow:**
+1. Admin fills form (email, password, warm_pool_size)
+2. Call `POST /bot-credentials`
+3. Poll `GET /bot-credentials/{id}/verify` every 2 seconds
+4. **If verified:** Auto-call `POST /warm-pool/start` → Show success
+5. **If failed:** Show error, close modal (admin can Edit to retry)
+
+**Edit Credential Flow:**
+- **If verified:** Only `warm_pool_size` editable, no re-verification needed
+- **If verification_failed:** `email` + `password` editable, triggers re-verification + polling
+
+**Key Differences from Previous Flow:**
+- ❌ No toggle for active/inactive status
+- ✅ Status auto-determined by verification result
+- ✅ Warm pool auto-starts only after successful verification
+- ✅ Edit modal fields depend on verification status
+
 ---
 
 ## Summary
 
 ### Available Endpoints:
-1. ✅ `POST /bot-credentials` - Create bot credential
+1. ✅ `POST /bot-credentials` - Create bot credential (triggers async SMTP validation)
 2. ✅ `GET /bot-credentials` - List all bot credentials
 3. ✅ `GET /bot-credentials/{credentialId}` - Get single credential
 4. ✅ `PUT /bot-credentials/{credentialId}` - Update credential
 5. ✅ `DELETE /bot-credentials/{credentialId}` - Delete credential
-6. ✅ `GET /bot-credentials/{credentialId}/verify` - Verify email (public)
+6. ✅ `GET /bot-credentials/{credentialId}/verify` - Check verification status (poll this)
 7. ✅ `GET /bot-credentials/{credentialId}/pool` - List pool containers
-8. ✅ `POST /bot-pool/start` - Start warm pool
-9. ✅ `POST /bot-pool/stop` - Stop warm pool
+8. ✅ `POST /warm-pool/start` - Start warm pool
+9. ✅ `POST /warm-pool/stop` - Stop warm pool
 
 ### Pages to Build:
 1. Bot Credentials List Page (`/admin/bot-credentials`)

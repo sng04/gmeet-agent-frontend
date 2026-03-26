@@ -66,6 +66,17 @@
 .b-embedding { background: var(--warn-50); color: var(--warn-600); }
 .b-uploaded { background: var(--gray-100); color: var(--gray-600); }
 
+/* Badge spinner for validating state */
+.badge-spinner {
+  width: 10px;
+  height: 10px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+
 /* Stat Cards */
 .stat {
   background: var(--white);
@@ -1230,4 +1241,90 @@ tr:hover td { background: var(--gray-25); }
   background: var(--ok-50);
   border: 1px solid var(--ok-100);
   color: var(--ok-700);
+}
+
+
+/* Verification Status */
+.verify-status {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.verify-status .verify-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.verify-status .verify-title {
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.verify-status .verify-desc {
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+.verify-pending {
+  background: var(--info-50);
+  border: 1px solid var(--info-100);
+  color: var(--info-700);
+}
+
+.verify-pending .verify-icon {
+  background: var(--info-100);
+  color: var(--info-600);
+}
+
+.verify-success {
+  background: var(--ok-50);
+  border: 1px solid var(--ok-100);
+  color: var(--ok-700);
+}
+
+.verify-success .verify-icon {
+  background: var(--ok-500);
+  color: #fff;
+}
+
+.verify-failed {
+  background: var(--err-50);
+  border: 1px solid var(--err-100);
+  color: var(--err-700);
+}
+
+.verify-failed .verify-icon {
+  background: var(--err-500);
+  color: #fff;
+}
+
+.verify-warning {
+  background: var(--warn-50);
+  border: 1px solid var(--warn-100);
+  color: var(--warn-700);
+}
+
+.verify-warning .verify-icon {
+  background: var(--warn-500);
+  color: #fff;
+}
+
+.verify-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--info-200);
+  border-top-color: var(--info-500);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  flex-shrink: 0;
 }

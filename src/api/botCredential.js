@@ -12,6 +12,7 @@ export const botCredentialApi = {
   create: (data) => api.post('/bot-credentials', data),
   update: (id, data) => api.put(`/bot-credentials/${id}`, data),
   delete: (id) => api.delete(`/bot-credentials/${id}`),
+  checkVerification: (id) => api.get(`/bot-credentials/${id}/verify`),
   getPool: (credentialId, status) => {
     const query = status ? `?status=${status}` : '';
     return api.get(`/bot-credentials/${credentialId}/pool${query}`);

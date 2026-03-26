@@ -1,11 +1,3 @@
-/**
- * Alert/Notice component
- * @param {Object} options
- * @param {string} options.message - Alert message (can include HTML)
- * @param {string} options.variant - 'warn', 'info', 'error', 'success'
- * @param {string} options.icon - Emoji or icon to display
- * @returns {HTMLElement}
- */
 export function Alert({ message, variant = 'info', icon = '' }) {
   const el = document.createElement('div');
   
