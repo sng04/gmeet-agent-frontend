@@ -1,14 +1,52 @@
 import { loadTemplate } from '../../utils/template.js';
 import { Table } from '../../components/ui/Table.js';
+import { StatCard } from '../../components/ui/Card.js';
 import { navigate } from '../../router.js';
 import { projectsApi } from '../../api/projects.js';
+import { sessionsApi } from '../../api/sessions.js';
+import { formatDate } from '../../utils/format.js';
 
-// Mock sessions data
-const mockSessions = [
-  { id: '1', purpose: 'Integration Planning', status: 'live', agent: 'TechSales Bot', qa: 3, duration: '12 min (ongoing)', date: 'Started today 10:30 AM' },
-  { id: '2', purpose: 'Q3 Architecture Review', status: 'summary', agent: 'TechSales Bot', qa: 8, duration: '47 min', date: 'Mar 15, 2026' },
-  { id: '3', purpose: 'Security Compliance Review', status: 'ended', agent: 'TechSales Bot', qa: 0, duration: '—', date: 'Mar 12, 2026' },
-];
+// Bot status to UI status mapping
+function getUIStatus(botStatus) {
+  const statusMap = {
+    'none': 'none',
+    'pending': 'starting',
+    'queued': 'starting',
+    'starting': 'starting',
+    'joining': 'starting',
+    'in_meeting': 'live',
+    'running': 'live',
+    'stopping': 'stopping',
+    'stopped': 'stopping',
+    'completed': 'finished',
+    'failed': 'failed',
+  };
+  return statusMap[botStatus] || botStatus;
+}
+
+function getStatusBadge(uiStatus) {
+  const badges = {
+    starting: '<span class="badge b-pri"><span class="dot"></span> Starting</span>',
+    live: '<span class="badge b-live"><span class="dot"></span> Live</span>',
+    stopping: '<span class="badge b-warn"><span class="dot"></span> Stopping</span>',
+    finished: '<span class="badge b-summary"><span class="dot"></span> Finished</span>',
+    failed: '<span class="badge b-err"><span class="dot"></span> Failed</span>',
+    none: '<span class="badge b-gray"><span class="dot"></span> No Bot</span>',
+  };
+  return badges[uiStatus] || '<span class="badge b-gray">' + uiStatus + '</span>';
+}
+
+function calculateDuration(startTime, endTime = null) {
+  if (!startTime) return '—';
+  const start = new Date(startTime);
+  const end = endTime ? new Date(endTime) : new Date();
+  const diffMs = end - start;
+  const diffMins = Math.floor(diffMs / 60000);
+  if (diffMins < 60) return diffMins + ' min';
+  const hours = Math.floor(diffMins / 60);
+  const mins = diffMins % 60;
+  return mins > 0 ? hours + 'h ' + mins + 'm' : hours + 'h';
+}
 
 export default async function DashboardController() {
   const el = await loadTemplate('/templates/user/dashboard.html', 'dashboard');
@@ -17,43 +55,80 @@ export default async function DashboardController() {
   const pageContent = el.querySelector('[data-bind="pageContent"]');
   const pageError = el.querySelector('[data-bind="pageError"]');
   const liveWidget = el.querySelector('[data-bind="liveWidget"]');
+  const statsGrid = el.querySelector('[data-bind="statsGrid"]');
 
   let projects = [];
+  let sessions = [];
+  let projectMap = {}; // { project_id: project_name }
 
-  // Live widget handlers
-  el.querySelector('[data-action="openLive"]')?.addEventListener('click', () => navigate('live-session'));
-
-  async function loadProjects() {
+  async function loadData() {
     try {
-      const res = await projectsApi.list();
-      projects = res.data?.items || [];
+      // Load projects first
+      const projectsRes = await projectsApi.list();
+      projects = projectsRes.data?.items || [];
+      
+      // Build project lookup map
+      projectMap = {};
+      projects.forEach(p => {
+        projectMap[p.project_id] = p.name || 'Untitled';
+      });
+
+      // Load all sessions
+      const sessionsRes = await sessionsApi.list({ limit: 50 });
+      sessions = sessionsRes.data?.items || [];
 
       // Hide loading, show content
       pageLoading.style.display = 'none';
       pageContent.style.display = 'block';
 
+      // Calculate and render stats
+      const activeSessions = sessions.filter(s => getUIStatus(s.bot_status) === 'live').length;
+      const totalSessions = sessions.length;
+      const totalProjects = projects.length;
+
+      renderStats(activeSessions, totalSessions, totalProjects);
       renderProjects();
       renderSessions();
-      
-      // Show live widget if there's a live session (mock for now)
-      const hasLiveSession = mockSessions.some(s => s.status === 'live');
-      if (hasLiveSession) {
-        liveWidget.style.display = 'block';
-        el.querySelector('[data-bind="liveTitle"]').textContent = 'Integration Planning Session';
-        el.querySelector('[data-bind="liveSubtitle"]').innerHTML = 'TechSales Bot is active · Duration: <strong>12 min</strong> · Acme Corp Sales';
-        el.querySelector('[data-bind="liveLatency"]').textContent = '~42ms · Good';
-        el.querySelector('[data-bind="liveQaCount"]').textContent = '3';
-      }
+      updateLiveWidget();
     } catch (err) {
       pageLoading.style.display = 'none';
       pageError.style.display = 'block';
-      pageError.innerHTML = `
-        <div class="empty">
-          <div class="empty-icon">⚠️</div>
-          <div class="empty-title">Failed to load projects</div>
-          <div class="empty-desc">${err.message}</div>
-        </div>
-      `;
+      pageError.innerHTML = '<div class="empty"><div class="empty-icon">⚠️</div><div class="empty-title">Failed to load data</div><div class="empty-desc">' + err.message + '</div></div>';
+    }
+  }
+
+  function renderStats(activeSessions, totalSessions, totalProjects) {
+    const stats = [
+      { icon: '📊', iconColor: 'red', label: 'Active Sessions', value: String(activeSessions), meta: totalSessions + ' total sessions', live: activeSessions > 0 },
+      { icon: '🤖', iconColor: 'green', label: 'Active Agents', value: '—', meta: 'Coming soon' },
+      { icon: '📁', iconColor: 'amber', label: 'Projects', value: String(totalProjects), meta: 'Assigned to you' },
+      { icon: '💬', iconColor: 'cyan', label: 'Q&A Pairs', value: '—', meta: 'Coming soon' },
+    ];
+
+    statsGrid.innerHTML = '';
+    stats.forEach(s => statsGrid.appendChild(StatCard(s)));
+  }
+
+  function updateLiveWidget() {
+    // Find the most recent live session
+    const liveSession = sessions.find(s => getUIStatus(s.bot_status) === 'live');
+    
+    if (liveSession) {
+      liveWidget.style.display = 'block';
+      const projectName = projectMap[liveSession.project_id] || 'Unknown Project';
+      const duration = calculateDuration(liveSession.start_time);
+      el.querySelector('[data-bind="liveTitle"]').textContent = liveSession.name || 'Live Session';
+      el.querySelector('[data-bind="liveSubtitle"]').innerHTML = projectName + ' · Duration: <strong>' + duration + '</strong>';
+      el.querySelector('[data-bind="liveLatency"]').textContent = '';
+      el.querySelector('[data-bind="liveQaCount"]').textContent = '—';
+      
+      // Update live button with session id
+      const liveBtn = el.querySelector('[data-action="openLive"]');
+      if (liveBtn) {
+        liveBtn.dataset.sessionId = liveSession.session_id;
+      }
+    } else {
+      liveWidget.style.display = 'none';
     }
   }
 
@@ -62,67 +137,94 @@ export default async function DashboardController() {
     projectsGrid.innerHTML = '';
 
     if (projects.length === 0) {
-      projectsGrid.innerHTML = `
-        <div class="empty" style="grid-column:1/-1">
-          <div class="empty-icon">📁</div>
-          <div class="empty-title">No projects assigned</div>
-          <div class="empty-desc">Contact your admin to get assigned to a project</div>
-        </div>
-      `;
+      projectsGrid.innerHTML = '<div class="empty" style="grid-column:1/-1"><div class="empty-icon">📁</div><div class="empty-title">No projects assigned</div><div class="empty-desc">Contact your admin to get assigned to a project</div></div>';
       return;
     }
 
     projects.forEach(p => {
       const card = document.createElement('div');
       card.className = 'proj-card';
-      card.innerHTML = `
-        <div class="proj-card-name">${p.name || 'Untitled'}</div>
-        <div class="proj-card-desc">${p.description || 'No description'}</div>
-        <div class="proj-card-meta">
-          <span>🤖 ${p.agent_id ? 'Agent assigned' : '—'}</span>
-          <span>📋 ${p.total_sessions ?? 0} sessions</span>
-          <span>👥 ${p.total_users ?? 0} users</span>
-        </div>
-      `;
-      card.addEventListener('click', () => navigate(`project/${p.project_id}`));
+      card.innerHTML = '<div class="proj-card-name">' + (p.name || 'Untitled') + '</div><div class="proj-card-desc">' + (p.description || 'No description') + '</div><div class="proj-card-meta"><span>🤖 ' + (p.agent_id ? 'Agent assigned' : '—') + '</span><span>📋 ' + (p.total_sessions ?? 0) + ' sessions</span><span>👥 ' + (p.total_users ?? 0) + ' users</span></div>';
+      card.addEventListener('click', () => navigate('project/' + p.project_id));
       projectsGrid.appendChild(card);
     });
   }
 
   function renderSessions() {
-    const stateMap = { live: 'b-live', summary: 'b-summary', ended: 'b-ended' };
-    const stateLabel = { live: 'Live', summary: 'Finished', ended: 'Ended' };
+    const container = el.querySelector('[data-bind="sessionsTable"]');
+    container.innerHTML = '';
+
+    if (sessions.length === 0) {
+      container.innerHTML = '<div class="empty"><div class="empty-icon">📋</div><div class="empty-title">No sessions yet</div><div class="empty-desc">Create a session from one of your projects</div></div>';
+      return;
+    }
 
     const sessionsTable = Table({
       title: 'Recent Sessions',
-      actions: `<button class="btn btn-g btn-sm" id="view-all-btn">View All →</button>`,
       columns: [
-        { label: 'Purpose', render: r => `<strong class="text-p">${r.purpose}</strong><div class="text-xs text-t">${r.date}</div>` },
-        { label: 'Status', render: r => `<span class="badge ${stateMap[r.status]}"><span class="dot"></span> ${stateLabel[r.status]}</span>` },
-        { label: 'Agent', key: 'agent' },
-        { label: 'Q&A', key: 'qa' },
-        { label: 'Duration', key: 'duration', className: 'mono text-xs' },
-        { label: '', render: r => {
-          if (r.status === 'live') return '<button class="btn btn-live btn-sm" data-action="live">Live →</button>';
-          if (r.status === 'summary') return '<button class="btn btn-review btn-sm" data-action="review">Review</button>';
-          return '';
-        }, className: 'text-right' },
+        { 
+          label: 'Session', 
+          render: r => {
+            const startTimeDisplay = r.start_time ? formatDate(r.start_time, { hour: '2-digit', minute: '2-digit' }) : '—';
+            return '<strong class="text-p">' + (r.name || 'Untitled') + '</strong><div class="text-xs text-t">' + startTimeDisplay + '</div>';
+          }
+        },
+        { 
+          label: 'Status', 
+          render: r => getStatusBadge(getUIStatus(r.bot_status))
+        },
+        { 
+          label: 'Project', 
+          render: r => '<span class="text-sm">' + (projectMap[r.project_id] || '—') + '</span>'
+        },
+        { label: 'Q&A', render: () => '—' },
+        { 
+          label: 'Duration', 
+          render: r => {
+            const uiStatus = getUIStatus(r.bot_status);
+            if (uiStatus === 'live') return calculateDuration(r.start_time) + ' (ongoing)';
+            if ((uiStatus === 'finished' || uiStatus === 'failed' || uiStatus === 'stopping') && r.start_time) {
+              return calculateDuration(r.start_time, r.end_time);
+            }
+            return '—';
+          },
+          className: 'mono text-xs' 
+        },
+        { 
+          label: '', 
+          render: r => {
+            const uiStatus = getUIStatus(r.bot_status);
+            if (uiStatus === 'live') {
+              return '<button class="btn btn-live btn-sm" data-action="live" data-session-id="' + r.session_id + '">Live →</button>';
+            }
+            if (uiStatus === 'finished') {
+              return '<button class="btn btn-review btn-sm" data-action="review" data-session-id="' + r.session_id + '">Review</button>';
+            }
+            return '';
+          }, 
+          className: 'text-right' 
+        },
       ],
-      data: mockSessions,
+      data: [...sessions].sort((a, b) => new Date(b.created_at || b.start_time || 0) - new Date(a.created_at || a.start_time || 0)).slice(0, 5),
     });
-    el.querySelector('[data-bind="sessionsTable"]').appendChild(sessionsTable);
+    container.appendChild(sessionsTable);
   }
 
   // Handle action buttons
   el.addEventListener('click', (e) => {
     const btn = e.target.closest('[data-action]');
-    if (btn) {
-      if (btn.dataset.action === 'live') navigate('live-session');
-      if (btn.dataset.action === 'review') navigate('retro-session');
+    if (!btn) return;
+    
+    const action = btn.dataset.action;
+    const sessionId = btn.dataset.sessionId;
+    
+    if (action === 'live' || action === 'openLive') {
+      navigate('live?sessionId=' + sessionId);
+    } else if (action === 'review') {
+      navigate('session/' + sessionId);
     }
-    if (e.target.id === 'view-all-btn') navigate('session-history');
   });
 
-  loadProjects();
+  loadData();
   return el;
 }

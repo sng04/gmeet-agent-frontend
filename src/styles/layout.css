@@ -254,12 +254,6 @@
 .page {
   padding: 24px;
   min-height: 100%;
-  animation: pageIn .2s ease;
-}
-
-@keyframes pageIn {
-  from { opacity: 0; transform: translateY(4px); }
-  to { opacity: 1; transform: translateY(0); }
 }
 
 .pg-hdr {

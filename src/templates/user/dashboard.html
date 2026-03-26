@@ -2,8 +2,8 @@
   <div class="page">
     <div class="pg-hdr">
       <div>
-        <h1>My Projects</h1>
-        <div class="pg-sub">Select a project to view sessions and details</div>
+        <h1>Dashboard</h1>
+        <div class="pg-sub">Overview of your projects and sessions</div>
       </div>
     </div>
 
@@ -36,7 +36,11 @@
 
     <!-- Content (hidden by default) -->
     <div data-bind="pageContent" style="display:none">
+      <!-- Stats Cards -->
+      <div class="g g4 mb-6" data-bind="statsGrid"></div>
+
       <!-- Project Cards Grid -->
+      <h3 class="mb-4" style="font-size:15px;font-weight:600">My Projects</h3>
       <div class="g g2 mb-6" data-bind="projectsGrid"></div>
 
       <!-- Sessions Table -->
