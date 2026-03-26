@@ -29,6 +29,9 @@ const adminRoutes = {
   'tokens': () => import('./controllers/admin/TokenUsageController.js'),
   'logs': () => import('./controllers/admin/AuditLogsController.js'),
   'users': () => import('./controllers/admin/UsersController.js'),
+  // Session routes (reuse user controllers)
+  'live': () => import('./controllers/user/LiveSessionController.js'),
+  'session/:id': () => import('./controllers/user/RetroSessionController.js'),
 };
 
 const userRoutes = {
@@ -38,9 +41,9 @@ const userRoutes = {
   'live-session': () => import('./controllers/user/LiveSessionController.js'),
   'live': () => import('./controllers/user/LiveSessionController.js'),
   'retro-session': () => import('./controllers/user/RetroSessionController.js'),
-  'session/:id': () => import('./controllers/user/RetroSessionController.js'),
   'session-create': () => import('./controllers/user/SessionCreateController.js'),
   'session/create': () => import('./controllers/user/SessionCreateController.js'),
+  'session/:id': () => import('./controllers/user/RetroSessionController.js'),
   'session-history': () => import('./controllers/user/SessionHistoryController.js'),
   'kb': () => import('./controllers/user/KnowledgeBaseController.js'),
 };
@@ -56,14 +59,27 @@ function parsePath() {
 }
 
 function matchRoute(path, routes) {
+  // Remove query string for route matching
+  const pathWithoutQuery = path.split('?')[0];
+  
+  // First try exact match (routes without params)
   for (const [pattern, loader] of Object.entries(routes)) {
+    if (!pattern.includes(':') && pattern === pathWithoutQuery) {
+      return { loader, params: {} };
+    }
+  }
+  
+  // Then try pattern match (routes with params)
+  for (const [pattern, loader] of Object.entries(routes)) {
+    if (!pattern.includes(':')) continue; // Skip exact routes already checked
+    
     const paramNames = [];
     const regexPattern = pattern.replace(/:([^/]+)/g, (_, name) => {
       paramNames.push(name);
       return '([^/]+)';
     });
-    const regex = new RegExp(`^${regexPattern}$`);
-    const match = path.match(regex);
+    const regex = new RegExp('^' + regexPattern + '$');
+    const match = pathWithoutQuery.match(regex);
     if (match) {
       const params = {};
       paramNames.forEach((name, i) => { params[name] = match[i + 1]; });
@@ -76,9 +92,10 @@ function matchRoute(path, routes) {
 export async function render() {
   const path = parsePath();
   
-  // Skip if same path
-  if (path === currentPath && currentPath !== null) return;
-  currentPath = path;
+  // Skip if same path (compare without query string for caching)
+  const pathWithoutQuery = path.split('?')[0];
+  if (pathWithoutQuery === currentPath && currentPath !== null) return;
+  currentPath = pathWithoutQuery;
 
   const state = authStore.getState();
   const { isAuthenticated, isAdmin, challenge } = state;
@@ -114,7 +131,7 @@ export async function render() {
       appContainer.appendChild(pageEl);
     } catch (err) {
       console.error('Route error:', err);
-      appContainer.innerHTML = `<div class="login-page"><div class="login-card"><h1>Error</h1><p>${err.message}</p></div></div>`;
+      appContainer.innerHTML = '<div class="login-page"><div class="login-card"><h1>Error</h1><p>' + err.message + '</p></div></div>';
     }
     return;
   }
@@ -135,13 +152,11 @@ export async function render() {
   }
 
   // Determine if current path is for admin portal
-  // Note: '' (dashboard) exists in both routes, so check admin-specific routes
   const isAdminOnlyPath = path.startsWith('admin/') || 
     (path !== '' && matchRoute(path, adminRoutes) !== null && matchRoute(path, userRoutes) === null);
   
   // Role-based access control - only redirect for admin-only routes
   if (!isAdmin && isAdminOnlyPath) {
-    // User trying to access admin-only routes - redirect to user dashboard
     console.log('User accessing admin route, redirecting to user dashboard');
     navigate('');
     return;
@@ -185,9 +200,11 @@ export async function render() {
     mainContainer.appendChild(pageEl);
   } catch (err) {
     console.error('Route error:', err);
-    mainContainer.innerHTML = `<div class="page"><h1>Error loading page</h1><p>${err.message}</p></div>`;
+    mainContainer.innerHTML = '<div class="page"><h1>Error loading page</h1><p>' + err.message + '</p></div>';
   }
-}export function navigate(path) {
+}
+
+export function navigate(path) {
   currentPath = null;
   window.history.pushState({}, '', '/' + path);
   render();

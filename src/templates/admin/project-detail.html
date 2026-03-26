@@ -23,19 +23,8 @@
 
     <!-- Content (hidden by default) -->
     <div data-bind="pageContent" style="display:none">
-      <!-- Live Session Banner -->
-      <div class="card mb-6" style="border-color:var(--err-500);background:var(--err-50)">
-        <div class="card-body" style="padding:14px 20px">
-          <div class="flex items-c gap-3">
-            <span class="badge b-live" style="font-size:12px;padding:4px 10px"><span class="dot"></span> Live Session</span>
-            <div>
-              <div class="text-sm fw-sb text-p">Integration Planning</div>
-              <div class="text-xs text-t">Started by Sarah Chen · 12 min ago · 3 Q&A pairs</div>
-            </div>
-            <button class="btn btn-s btn-sm" style="margin-left:auto" data-action="viewLive">View Live →</button>
-          </div>
-        </div>
-      </div>
+      <!-- Live Session Banner (hidden until sessions load) -->
+      <div class="card mb-6" data-bind="liveBanner" style="display:none;border-color:var(--err-500);background:var(--err-50)"></div>
 
       <!-- Stats -->
       <div class="g g5 mb-6">
@@ -94,7 +83,35 @@
       </div>
 
       <!-- Sessions Tab -->
-      <div class="tab-c" data-bind="tabSessions"></div>
+      <div class="tab-c" data-bind="tabSessions">
+        <!-- Sessions Loading -->
+        <div data-bind="sessionsLoading">
+          <div class="loading">
+            <div class="loading-spinner"></div>
+            <div class="loading-text">Loading sessions...</div>
+          </div>
+        </div>
+        <!-- Sessions Content -->
+        <div data-bind="sessionsContent" style="display:none">
+          <div class="tbl-wrap">
+            <table>
+              <thead><tr><th>Session</th><th>Status</th><th>Meet Link</th><th>Q&A</th><th>Duration</th><th></th></tr></thead>
+              <tbody data-bind="sessionsBody"></tbody>
+            </table>
+            <div class="tbl-foot" data-bind="sessionsFoot"></div>
+          </div>
+        </div>
+        <!-- Sessions Empty -->
+        <div data-bind="sessionsEmpty" style="display:none">
+          <div class="empty">
+            <div class="empty-icon">📋</div>
+            <div class="empty-title">No sessions yet</div>
+            <div class="empty-desc">Sessions will appear here when users create them</div>
+          </div>
+        </div>
+        <!-- Sessions Error -->
+        <div data-bind="sessionsError" style="display:none"></div>
+      </div>
     </div>
 
     <!-- Error State (hidden by default) -->

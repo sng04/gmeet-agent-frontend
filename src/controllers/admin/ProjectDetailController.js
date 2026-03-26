@@ -5,15 +5,52 @@ import { ConfirmDialog } from '../../components/ui/ConfirmDialog.js';
 import { showLoading, hideLoading } from '../../components/ui/Loading.js';
 import { navigate } from '../../router.js';
 import { projectsApi } from '../../api/projects.js';
+import { sessionsApi } from '../../api/sessions.js';
 import { botCredentialApi } from '../../api/botCredential.js';
 import { usersApi } from '../../api/users.js';
+import { formatDate } from '../../utils/format.js';
 
-// Mock data
-const mockSessions = [
-  { purpose: 'Q3 Architecture Review', status: 'finished', qa: 8, duration: '47 min', createdBy: 'Sarah Chen' },
-  { purpose: 'Integration Planning', status: 'live', qa: 3, duration: '12 min', createdBy: 'Sarah Chen' },
-  { purpose: 'Security Compliance Review', status: 'ended', qa: 0, duration: '—', createdBy: 'Sarah Chen' },
-];
+// Bot status to UI status mapping
+function getUIStatus(botStatus) {
+  const statusMap = {
+    'none': 'none',
+    'pending': 'starting',
+    'queued': 'starting',
+    'starting': 'starting',
+    'joining': 'starting',
+    'in_meeting': 'live',
+    'running': 'live',
+    'stopping': 'stopping',
+    'stopped': 'stopping',
+    'completed': 'finished',
+    'failed': 'failed',
+  };
+  return statusMap[botStatus] || botStatus;
+}
+
+function getStatusBadge(uiStatus) {
+  const badges = {
+    starting: '<span class="badge b-pri"><span class="dot"></span> Starting</span>',
+    live: '<span class="badge b-live"><span class="dot"></span> Live</span>',
+    stopping: '<span class="badge b-warn"><span class="dot"></span> Stopping</span>',
+    finished: '<span class="badge b-summary"><span class="dot"></span> Finished</span>',
+    failed: '<span class="badge b-err"><span class="dot"></span> Failed</span>',
+    none: '<span class="badge b-gray"><span class="dot"></span> No Bot</span>',
+  };
+  return badges[uiStatus] || '<span class="badge b-gray">' + uiStatus + '</span>';
+}
+
+function calculateDuration(startTime, endTime = null) {
+  if (!startTime) return '—';
+  const start = new Date(startTime);
+  const end = endTime ? new Date(endTime) : new Date();
+  const diffMs = end - start;
+  const diffMins = Math.floor(diffMs / 60000);
+  if (diffMins < 60) return diffMins + ' min';
+  const hours = Math.floor(diffMins / 60);
+  const mins = diffMins % 60;
+  return mins > 0 ? hours + 'h ' + mins + 'm' : hours + 'h';
+}
 
 const mockDocs = [
   { name: 'Platform Architecture Overview.pdf', type: 'pdf', size: '2.4 MB', status: 'indexed', uploaded: 'Mar 10, 2026' },
@@ -46,6 +83,7 @@ export default async function ProjectDetailController(params) {
   let credentialEmail = null;
   let assignedUsers = [];
   let allUsers = [];
+  let sessions = [];
 
   // Breadcrumb nav-back
   el.querySelectorAll('.nav-back').forEach(link => {
@@ -78,6 +116,7 @@ export default async function ProjectDetailController(params) {
       populateProjectData();
       setupEventListeners();
       loadUsers();
+      loadSessions();
     } catch (err) {
       pageLoading.style.display = 'none';
       pageError.style.display = 'block';
@@ -107,7 +146,6 @@ export default async function ProjectDetailController(params) {
     // KB
     el.querySelector('[data-bind="kbMeta"]').textContent = `${mockDocs.length} documents · Last updated Mar 12, 2026`;
     renderKbDocs();
-    renderSessionsTab();
 
     // Edit button
     el.querySelector('[data-bind="actions"]').appendChild(
@@ -148,39 +186,102 @@ export default async function ProjectDetailController(params) {
   }
 
   function renderSessionsTab() {
-    const getStatusBadge = (status) => {
-      const badges = {
-        live: '<span class="badge b-live"><span class="dot"></span> Live</span>',
-        finished: '<span class="badge b-summary"><span class="dot"></span> Finished</span>',
-        ended: '<span class="badge b-ended"><span class="dot"></span> Ended</span>',
-      };
-      return badges[status] || '';
-    };
+    const sessionsLoading = el.querySelector('[data-bind="sessionsLoading"]');
+    const sessionsContent = el.querySelector('[data-bind="sessionsContent"]');
+    const sessionsEmpty = el.querySelector('[data-bind="sessionsEmpty"]');
 
-    el.querySelector('[data-bind="tabSessions"]').innerHTML = `
-      <div class="tbl-wrap">
-        <table>
-          <thead><tr><th>Purpose</th><th>State</th><th>Q&A</th><th>Duration</th><th>Created By</th><th></th></tr></thead>
-          <tbody>
-            ${mockSessions.map(s => `
-              <tr>
-                <td><strong>${s.purpose}</strong></td>
-                <td>${getStatusBadge(s.status)}</td>
-                <td>${s.qa}</td>
-                <td class="mono text-xs">${s.duration}</td>
-                <td>${s.createdBy}</td>
-                <td><button class="btn btn-s btn-sm">Review</button></td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      </div>
-    `;
+    sessionsLoading.style.display = 'none';
+
+    if (sessions.length === 0) {
+      sessionsEmpty.style.display = 'block';
+      return;
+    }
+
+    sessionsContent.style.display = 'block';
+    const tbody = el.querySelector('[data-bind="sessionsBody"]');
+    
+    tbody.innerHTML = sessions.map(s => {
+      const uiStatus = getUIStatus(s.bot_status);
+      let duration = '—';
+      if (uiStatus === 'live') {
+        duration = calculateDuration(s.start_time) + ' (ongoing)';
+      } else if ((uiStatus === 'finished' || uiStatus === 'failed' || uiStatus === 'stopping') && s.start_time) {
+        duration = calculateDuration(s.start_time, s.end_time);
+      }
+      const startTimeDisplay = s.start_time ? formatDate(s.start_time, { hour: '2-digit', minute: '2-digit' }) : '—';
+      const meetLinkHtml = s.meeting_link 
+        ? '<a href="' + s.meeting_link + '" target="_blank" class="text-pri">' + s.meeting_link.replace('https://', '') + '</a>'
+        : '—';
+
+      let actionHtml = '';
+      if (uiStatus === 'live') {
+        actionHtml = '<button class="btn btn-live btn-sm" data-action="viewSession" data-session-id="' + s.session_id + '" data-status="live">Live →</button>';
+      } else if (uiStatus === 'finished') {
+        actionHtml = '<button class="btn btn-review btn-sm" data-action="viewSession" data-session-id="' + s.session_id + '" data-status="finished">Review</button>';
+      }
+
+      return '<tr><td><strong class="text-p">' + (s.name || 'Untitled') + '</strong><div class="text-xs text-t">' + startTimeDisplay + '</div></td><td>' + getStatusBadge(uiStatus) + '</td><td class="mono text-xs">' + meetLinkHtml + '</td><td>—</td><td class="mono text-xs">' + duration + '</td><td><div class="session-action-btns">' + actionHtml + '</div></td></tr>';
+    }).join('');
+
+    el.querySelector('[data-bind="sessionsFoot"]').innerHTML = '<span>' + sessions.length + ' session' + (sessions.length !== 1 ? 's' : '') + '</span>';
+
+    // Update live banner
+    updateLiveBanner();
+  }
+
+  function updateLiveBanner() {
+    const liveBanner = el.querySelector('[data-bind="liveBanner"]');
+    if (!liveBanner) return;
+    
+    const liveSession = sessions.find(s => getUIStatus(s.bot_status) === 'live');
+    
+    if (liveSession) {
+      liveBanner.style.display = 'block';
+      liveBanner.innerHTML = '<div class="card-body" style="padding:14px 20px"><div class="flex items-c gap-3"><span class="badge b-live" style="font-size:12px;padding:4px 10px"><span class="dot"></span> Live Session</span><div><div class="text-sm fw-sb text-p">' + (liveSession.name || 'Untitled Session') + '</div><div class="text-xs text-t">Started ' + (liveSession.start_time ? calculateDuration(liveSession.start_time) + ' ago' : 'recently') + '</div></div><button class="btn btn-s btn-sm" style="margin-left:auto" data-action="viewLive" data-session-id="' + liveSession.session_id + '">View Live →</button></div></div>';
+    } else {
+      liveBanner.style.display = 'none';
+    }
+  }
+
+  async function loadSessions() {
+    const sessionsLoading = el.querySelector('[data-bind="sessionsLoading"]');
+    const sessionsError = el.querySelector('[data-bind="sessionsError"]');
+
+    try {
+      const res = await sessionsApi.listByProject(projectId);
+      sessions = res.data?.items || [];
+      renderSessionsTab();
+      el.querySelector('[data-bind="statSessions"]').textContent = sessions.length;
+    } catch (err) {
+      sessionsLoading.style.display = 'none';
+      sessionsError.style.display = 'block';
+      sessionsError.innerHTML = '<div class="empty"><div class="empty-icon">⚠️</div><div class="empty-title">Failed to load sessions</div><div class="empty-desc">' + err.message + '</div></div>';
+    }
   }
 
   function setupEventListeners() {
-    // View Live
-    el.querySelector('[data-action="viewLive"]')?.addEventListener('click', () => navigate('qa'));
+    // View Live from banner
+    el.addEventListener('click', (e) => {
+      const viewLiveBtn = e.target.closest('[data-action="viewLive"]');
+      if (viewLiveBtn) {
+        const sessionId = viewLiveBtn.dataset.sessionId;
+        if (sessionId) {
+          navigate('live?sessionId=' + sessionId);
+        }
+      }
+
+      // Session action buttons (Live/Review)
+      const sessionBtn = e.target.closest('[data-action="viewSession"]');
+      if (sessionBtn) {
+        const sessionId = sessionBtn.dataset.sessionId;
+        const status = sessionBtn.dataset.status;
+        if (status === 'live') {
+          navigate('live?sessionId=' + sessionId);
+        } else {
+          navigate('session/' + sessionId);
+        }
+      }
+    });
 
     // Tab switching
     el.querySelectorAll('.tab').forEach(tab => {
@@ -205,7 +306,6 @@ export default async function ProjectDetailController(params) {
   }
 
   async function loadUsers() {
-    const container = el.querySelector('[data-bind="tabUsers"]');
     try {
       const res = await projectsApi.getUsers(projectId);
       assignedUsers = res.data?.users || [];
@@ -219,12 +319,23 @@ export default async function ProjectDetailController(params) {
 
   function renderUsersTab() {
     const container = el.querySelector('[data-bind="tabUsers"]');
-    container.innerHTML = `
-      <div class="flex jc-b items-c mb-4">
-        <div class="text-sm text-t">${assignedUsers.length} users assigned</div>
-        <button class="btn btn-p btn-sm" data-action="assignUser">+ Assign User</button>
-      </div>
-      ${assignedUsers.length > 0 ? `
+    
+    if (assignedUsers.length === 0) {
+      container.innerHTML = `
+        <div class="flex jc-end mb-4">
+          <button class="btn btn-p btn-sm" data-action="assignUser">+ Assign User</button>
+        </div>
+        <div class="empty">
+          <div class="empty-icon">👥</div>
+          <div class="empty-title">No users assigned</div>
+          <div class="empty-desc">Assign users to this project to get started</div>
+        </div>
+      `;
+    } else {
+      container.innerHTML = `
+        <div class="flex jc-end mb-4">
+          <button class="btn btn-p btn-sm" data-action="assignUser">+ Assign User</button>
+        </div>
         <div class="tbl-wrap">
           <table>
             <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Added</th><th></th></tr></thead>
@@ -240,9 +351,10 @@ export default async function ProjectDetailController(params) {
               `).join('')}
             </tbody>
           </table>
+          <div class="tbl-foot"><span>${assignedUsers.length} user${assignedUsers.length !== 1 ? 's' : ''} assigned</span></div>
         </div>
-      ` : '<div class="text-t text-sm">No users assigned yet</div>'}
-    `;
+      `;
+    }
 
     container.querySelector('[data-action="assignUser"]')?.addEventListener('click', openAssignUserModal);
     container.querySelectorAll('[data-action="removeUser"]').forEach(btn => {
