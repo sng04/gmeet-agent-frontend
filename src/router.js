@@ -25,6 +25,7 @@ const adminRoutes = {
   'gmail': () => import('./controllers/admin/GmailCredentialsController.js'),
   'gmail-create': () => import('./controllers/admin/GmailCreateController.js'),
   'gmail-edit': () => import('./controllers/admin/GmailEditController.js'),
+  'sessions': () => import('./controllers/admin/SessionsController.js'),
   'qa': () => import('./controllers/admin/QAMonitorController.js'),
   'tokens': () => import('./controllers/admin/TokenUsageController.js'),
   'logs': () => import('./controllers/admin/AuditLogsController.js'),

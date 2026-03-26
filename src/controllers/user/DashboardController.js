@@ -1,5 +1,6 @@
 import { loadTemplate } from '../../utils/template.js';
 import { Table } from '../../components/ui/Table.js';
+import { StatCard } from '../../components/ui/Card.js';
 import { navigate } from '../../router.js';
 import { projectsApi } from '../../api/projects.js';
 import { sessionsApi } from '../../api/sessions.js';
@@ -54,6 +55,7 @@ export default async function DashboardController() {
   const pageContent = el.querySelector('[data-bind="pageContent"]');
   const pageError = el.querySelector('[data-bind="pageError"]');
   const liveWidget = el.querySelector('[data-bind="liveWidget"]');
+  const statsGrid = el.querySelector('[data-bind="statsGrid"]');
 
   let projects = [];
   let sessions = [];
@@ -79,6 +81,12 @@ export default async function DashboardController() {
       pageLoading.style.display = 'none';
       pageContent.style.display = 'block';
 
+      // Calculate and render stats
+      const activeSessions = sessions.filter(s => getUIStatus(s.bot_status) === 'live').length;
+      const totalSessions = sessions.length;
+      const totalProjects = projects.length;
+
+      renderStats(activeSessions, totalSessions, totalProjects);
       renderProjects();
       renderSessions();
       updateLiveWidget();
@@ -89,6 +97,18 @@ export default async function DashboardController() {
     }
   }
 
+  function renderStats(activeSessions, totalSessions, totalProjects) {
+    const stats = [
+      { icon: '📊', iconColor: 'red', label: 'Active Sessions', value: String(activeSessions), meta: totalSessions + ' total sessions', live: activeSessions > 0 },
+      { icon: '🤖', iconColor: 'green', label: 'Active Agents', value: '—', meta: 'Coming soon' },
+      { icon: '📁', iconColor: 'amber', label: 'Projects', value: String(totalProjects), meta: 'Assigned to you' },
+      { icon: '💬', iconColor: 'cyan', label: 'Q&A Pairs', value: '—', meta: 'Coming soon' },
+    ];
+
+    statsGrid.innerHTML = '';
+    stats.forEach(s => statsGrid.appendChild(StatCard(s)));
+  }
+
   function updateLiveWidget() {
     // Find the most recent live session
     const liveSession = sessions.find(s => getUIStatus(s.bot_status) === 'live');
@@ -97,7 +117,6 @@ export default async function DashboardController() {
       liveWidget.style.display = 'block';
       const projectName = projectMap[liveSession.project_id] || 'Unknown Project';
       const duration = calculateDuration(liveSession.start_time);
-      
       el.querySelector('[data-bind="liveTitle"]').textContent = liveSession.name || 'Live Session';
       el.querySelector('[data-bind="liveSubtitle"]').innerHTML = projectName + ' · Duration: <strong>' + duration + '</strong>';
       el.querySelector('[data-bind="liveLatency"]').textContent = '';
@@ -186,7 +205,7 @@ export default async function DashboardController() {
           className: 'text-right' 
         },
       ],
-      data: sessions,
+      data: [...sessions].sort((a, b) => new Date(b.created_at || b.start_time || 0) - new Date(a.created_at || a.start_time || 0)).slice(0, 5),
     });
     container.appendChild(sessionsTable);
   }
