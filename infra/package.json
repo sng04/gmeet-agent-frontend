@@ -1,0 +1,15 @@
+{
+  "name": "meetagent-infra",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "build": "echo 'No build needed'",
+    "cdk": "cdk",
+    "deploy": "cdk deploy --require-approval never",
+    "destroy": "cdk destroy --force"
+  },
+  "dependencies": {
+    "aws-cdk-lib": "^2.170.0",
+    "constructs": "^10.4.2"
+  }
+}

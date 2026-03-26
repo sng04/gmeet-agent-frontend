@@ -2,47 +2,47 @@ import { authStore } from './stores/auth.js';
 
 // Public routes (no auth required)
 const publicRoutes = {
-  'login': () => import('./pages/user/Login.js'),
-  'change-password': () => import('./pages/user/ChangePassword.js'),
-  'admin/login': () => import('./pages/admin/Login.js'),
-  'admin/change-password': () => import('./pages/admin/ChangePassword.js'),
+  'login': () => import('./controllers/user/UserLoginController.js'),
+  'change-password': () => import('./controllers/user/UserChangePasswordController.js'),
+  'admin/login': () => import('./controllers/admin/AdminLoginController.js'),
+  'admin/change-password': () => import('./controllers/admin/AdminChangePasswordController.js'),
 };
 
 const adminRoutes = {
-  '': () => import('./pages/admin/Dashboard.js'),
-  'projects': () => import('./pages/admin/Projects.js'),
-  'project-create': () => import('./pages/admin/ProjectCreate.js'),
-  'project-detail': () => import('./pages/admin/ProjectDetail.js'),
-  'project-edit': () => import('./pages/admin/ProjectEdit.js'),
-  'projects/:id': () => import('./pages/admin/ProjectDetail.js'),
-  'agents': () => import('./pages/admin/Agents.js'),
-  'agent-create': () => import('./pages/admin/AgentCreate.js'),
-  'agent-detail': () => import('./pages/admin/AgentDetail.js'),
-  'agent-edit': () => import('./pages/admin/AgentEdit.js'),
-  'agents/:id': () => import('./pages/admin/AgentDetail.js'),
-  'skills': () => import('./pages/admin/Skills.js'),
-  'skill-create': () => import('./pages/admin/SkillCreate.js'),
-  'gmail': () => import('./pages/admin/GmailCredentials.js'),
-  'gmail-create': () => import('./pages/admin/GmailCreate.js'),
-  'gmail-edit': () => import('./pages/admin/GmailEdit.js'),
-  'qa': () => import('./pages/admin/QAMonitor.js'),
-  'tokens': () => import('./pages/admin/TokenUsage.js'),
-  'logs': () => import('./pages/admin/AuditLogs.js'),
-  'users': () => import('./pages/admin/Users.js'),
+  '': () => import('./controllers/admin/DashboardController.js'),
+  'projects': () => import('./controllers/admin/ProjectsController.js'),
+  'project-create': () => import('./controllers/admin/ProjectCreateController.js'),
+  'project-detail': () => import('./controllers/admin/ProjectDetailController.js'),
+  'project-edit': () => import('./controllers/admin/ProjectEditController.js'),
+  'projects/:id': () => import('./controllers/admin/ProjectDetailController.js'),
+  'agents': () => import('./controllers/admin/AgentsController.js'),
+  'agent-create': () => import('./controllers/admin/AgentCreateController.js'),
+  'agent-detail': () => import('./controllers/admin/AgentDetailController.js'),
+  'agent-edit': () => import('./controllers/admin/AgentEditController.js'),
+  'agents/:id': () => import('./controllers/admin/AgentDetailController.js'),
+  'skills': () => import('./controllers/admin/SkillsController.js'),
+  'skill-create': () => import('./controllers/admin/SkillCreateController.js'),
+  'gmail': () => import('./controllers/admin/GmailCredentialsController.js'),
+  'gmail-create': () => import('./controllers/admin/GmailCreateController.js'),
+  'gmail-edit': () => import('./controllers/admin/GmailEditController.js'),
+  'qa': () => import('./controllers/admin/QAMonitorController.js'),
+  'tokens': () => import('./controllers/admin/TokenUsageController.js'),
+  'logs': () => import('./controllers/admin/AuditLogsController.js'),
+  'users': () => import('./controllers/admin/UsersController.js'),
 };
 
 const userRoutes = {
-  '': () => import('./pages/user/Dashboard.js'),
-  'project-detail': () => import('./pages/user/ProjectDetail.js'),
-  'project/:id': () => import('./pages/user/ProjectDetail.js'),
-  'live-session': () => import('./pages/user/LiveSession.js'),
-  'live': () => import('./pages/user/LiveSession.js'),
-  'retro-session': () => import('./pages/user/RetroSession.js'),
-  'session/:id': () => import('./pages/user/RetroSession.js'),
-  'session-create': () => import('./pages/user/SessionCreate.js'),
-  'session/create': () => import('./pages/user/SessionCreate.js'),
-  'session-history': () => import('./pages/user/SessionHistory.js'),
-  'kb': () => import('./pages/user/KnowledgeBase.js'),
+  '': () => import('./controllers/user/DashboardController.js'),
+  'project-detail': () => import('./controllers/user/ProjectDetailController.js'),
+  'project/:id': () => import('./controllers/user/ProjectDetailController.js'),
+  'live-session': () => import('./controllers/user/LiveSessionController.js'),
+  'live': () => import('./controllers/user/LiveSessionController.js'),
+  'retro-session': () => import('./controllers/user/RetroSessionController.js'),
+  'session/:id': () => import('./controllers/user/RetroSessionController.js'),
+  'session-create': () => import('./controllers/user/SessionCreateController.js'),
+  'session/create': () => import('./controllers/user/SessionCreateController.js'),
+  'session-history': () => import('./controllers/user/SessionHistoryController.js'),
+  'kb': () => import('./controllers/user/KnowledgeBaseController.js'),
 };
 
 let currentPath = null;
@@ -160,8 +160,8 @@ export async function render() {
 
   // Ensure layout is rendered
   if (!layoutRendered) {
-    const { Layout } = await import('./components/layout/Layout.js');
-    const { el, main } = Layout();
+    const LayoutCtrl = await import('./controllers/layout/LayoutController.js');
+    const { el, main } = await LayoutCtrl.default();
     appContainer.innerHTML = '';
     appContainer.appendChild(el);
     appContainer._mainContainer = main;

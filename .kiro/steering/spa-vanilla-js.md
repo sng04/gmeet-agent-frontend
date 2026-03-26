@@ -1,13 +1,21 @@
 # MeetAgent SPA - Vanilla JS Architecture
 
 ## Overview
-Single Page Application using Vanilla JavaScript with a minimal router for Admin and User portals of MeetAgent.
+Single Page Application using Vanilla JavaScript with an HTML Template + Controller pattern for Admin and User portals. Page markup lives in `.html` template files using browser-native `<template>` elements; behavior lives in controller `.js` files that load templates, populate data, and attach events.
 
 ## Tech Stack
 - **Vanilla JavaScript** (ES6+ modules)
-- **Minimal custom router** (hash-based or History API)
+- **Browser-native `<template>` elements** for HTML markup
+- **Template Loader utility** (`src/utils/template.js`) for fetching, parsing, caching templates
+- **History API router** with auth guards and role-based access
 - **CSS Variables** for theming
 - **Fetch API** for HTTP requests
+
+## Architecture Rules
+- **Separate template + controller only when the view is a distinct route** (each page gets its own pair)
+- **Inline subcomponents into their parent** when they're only used in one place and don't need independent refresh
+- **Layout is a single consolidated file** — topbar, sidebar, and shell are all in `layout.html` + `LayoutController.js`
+- **UI components** (`Button`, `Table`, `Modal`, etc.) stay as JS functions since they're genuinely reusable across many controllers
 
 ## Folder Structure
 
@@ -15,311 +23,160 @@ Single Page Application using Vanilla JavaScript with a minimal router for Admin
 src/
 ├── index.html              # Entry point HTML
 ├── main.js                 # App initialization
-├── router.js               # Client-side router
-├── api/
+├── router.js               # Client-side router (History API)
+├── api/                    # API client modules (unchanged)
 │   ├── client.js           # Base fetch wrapper with auth
 │   ├── auth.js             # Login, logout, token refresh
 │   ├── projects.js         # Projects CRUD
 │   ├── agents.js           # Agents endpoints
 │   ├── sessions.js         # Sessions & Q&A endpoints
-│   └── gmail.js            # Gmail credentials
-├── components/
+│   ├── users.js            # Users CRUD
+│   ├── botCredential.js    # Gmail/bot credentials
+│   └── botPool.js          # Bot pool management
+├── templates/
 │   ├── layout/
-│   │   ├── Topbar.js       # Header with logo, avatar
-│   │   ├── Sidebar.js      # Navigation sidebar
-│   │   └── Layout.js       # Main layout wrapper
-│   ├── ui/
-│   │   ├── Button.js       # .btn, .btn-p, .btn-s, etc
-│   │   ├── Badge.js        # .badge, .b-ok, .b-live, etc
-│   │   ├── Card.js         # .card, .stat
-│   │   ├── Table.js        # .tbl-wrap with pagination
-│   │   ├── Form.js         # .form-g, .form-i, .form-sel
-│   │   └── Modal.js        # Dialog/modal component
-│   └── shared/
-│       ├── QAItem.js       # Q&A pair display
-│       ├── LiveWidget.js   # Live session indicator
-│       └── ProjectCard.js  # Project card for dashboard
-├── pages/
-│   ├── admin/
-│   │   ├── Dashboard.js
-│   │   ├── Projects.js
-│   │   ├── ProjectDetail.js
-│   │   ├── ProjectCreate.js
-│   │   ├── Agents.js
-│   │   ├── AgentDetail.js
-│   │   ├── Skills.js
-│   │   ├── GmailCredentials.js
-│   │   ├── QAMonitor.js
-│   │   ├── TokenUsage.js
-│   │   └── AuditLogs.js
-│   └── user/
-│       ├── Dashboard.js
-│       ├── ProjectDetail.js
-│       ├── LiveSession.js
-│       ├── RetroSession.js
-│       ├── SessionCreate.js
-│       └── KnowledgeBase.js
-├── stores/
-│   ├── auth.js             # Auth state (user, token, role)
-│   └── app.js              # Global state (current project, etc)
+│   │   └── layout.html     # Consolidated layout (topbar + sidebar + main)
+│   ├── admin/              # 20 admin page templates
+│   │   ├── dashboard.html
+│   │   ├── projects.html
+│   │   ├── project-detail.html
+│   │   ├── project-create.html
+│   │   ├── project-edit.html
+│   │   ├── agents.html
+│   │   ├── agent-create.html
+│   │   ├── agent-detail.html
+│   │   ├── agent-edit.html
+│   │   ├── skills.html
+│   │   ├── skill-create.html
+│   │   ├── gmail-credentials.html
+│   │   ├── gmail-create.html
+│   │   ├── gmail-edit.html
+│   │   ├── qa-monitor.html
+│   │   ├── token-usage.html
+│   │   ├── audit-logs.html
+│   │   ├── users.html
+│   │   ├── login.html
+│   │   └── change-password.html
+│   └── user/               # 9 user page templates
+│       ├── dashboard.html
+│       ├── project-detail.html
+│       ├── live-session.html
+│       ├── retro-session.html
+│       ├── session-create.html
+│       ├── session-history.html
+│       ├── knowledge-base.html
+│       ├── login.html
+│       └── change-password.html
+├── controllers/
+│   ├── layout/
+│   │   └── LayoutController.js   # Consolidated (topbar + sidebar + shell)
+│   ├── admin/              # 20 admin page controllers
+│   │   ├── DashboardController.js
+│   │   ├── ProjectsController.js
+│   │   ├── ProjectDetailController.js
+│   │   ├── ProjectCreateController.js
+│   │   ├── ProjectEditController.js
+│   │   ├── AgentsController.js
+│   │   ├── AgentCreateController.js
+│   │   ├── AgentDetailController.js
+│   │   ├── AgentEditController.js
+│   │   ├── SkillsController.js
+│   │   ├── SkillCreateController.js
+│   │   ├── GmailCredentialsController.js
+│   │   ├── GmailCreateController.js
+│   │   ├── GmailEditController.js
+│   │   ├── QAMonitorController.js
+│   │   ├── TokenUsageController.js
+│   │   ├── AuditLogsController.js
+│   │   ├── UsersController.js
+│   │   ├── AdminLoginController.js
+│   │   └── AdminChangePasswordController.js
+│   └── user/               # 9 user page controllers
+│       ├── DashboardController.js
+│       ├── ProjectDetailController.js
+│       ├── LiveSessionController.js
+│       ├── RetroSessionController.js
+│       ├── SessionCreateController.js
+│       ├── SessionHistoryController.js
+│       ├── KnowledgeBaseController.js
+│       ├── UserLoginController.js
+│       └── UserChangePasswordController.js
+├── components/
+│   └── ui/                 # Reusable UI component functions
+│       ├── Button.js
+│       ├── Badge.js
+│       ├── Card.js
+│       ├── Table.js
+│       ├── Form.js
+│       ├── Modal.js
+│       ├── Alert.js
+│       └── Toggle.js
+├── stores/                 # State management (observer pattern)
+│   ├── auth.js
+│   └── app.js
 ├── utils/
-│   ├── dom.js              # DOM helper functions
-│   ├── format.js           # Date, number formatting
-│   └── storage.js          # LocalStorage wrapper
-└── styles/
-    ├── variables.css       # CSS custom properties
-    ├── base.css            # Reset, typography, scrollbar
-    ├── layout.css          # Topbar, sidebar, main
-    ├── components.css      # Buttons, badges, cards, tables
-    └── pages.css           # Page-specific styles
+│   ├── template.js         # Template Loader (fetch, parse, cache, clone)
+│   ├── dom.js
+│   ├── format.js
+│   └── storage.js
+└── styles/                 # CSS (unchanged)
+    ├── variables.css
+    ├── base.css
+    ├── layout.css
+    ├── components.css
+    └── pages.css
 ```
 
-## Design System (from HTML templates)
+## Patterns
 
-### CSS Variables
-```css
-:root {
-  /* Colors */
-  --white: #FFFFFF;
-  --gray-25: #FCFCFD;
-  --gray-50: #F9FAFB;
-  --gray-100: #F2F4F7;
-  --gray-200: #EAECF0;
-  --gray-300: #D0D5DD;
-  --gray-400: #98A2B3;
-  --gray-500: #667085;
-  --gray-600: #475467;
-  --gray-700: #344054;
-  --gray-800: #1D2939;
-  --gray-900: #101828;
-  
-  --pri-25: #F0F6FF;
-  --pri-50: #E0EDFF;
-  --pri-100: #C2DBFF;
-  --pri-400: #3B82F6;
-  --pri-500: #2563EB;
-  --pri-600: #1D4ED8;
-  --pri-700: #1E40AF;
-  
-  --ok-50: #ECFDF5;
-  --ok-500: #10B981;
-  --ok-700: #047857;
-  
-  --warn-50: #FFFBEB;
-  --warn-500: #F59E0B;
-  --warn-700: #B45309;
-  
-  --err-50: #FEF2F2;
-  --err-500: #EF4444;
-  --err-700: #B91C1C;
-  
-  /* Typography */
-  --font: 'Outfit', sans-serif;
-  --mono: 'DM Mono', monospace;
-  
-  /* Layout */
-  --sidebar-w: 248px;
-  --topbar-h: 56px;
+### Template + Controller Pattern
+```html
+<!-- templates/admin/projects.html -->
+<template id="projects">
+  <div class="page">
+    <div class="pg-hdr">
+      <div><h1>Projects</h1><div class="pg-sub">Manage projects</div></div>
+      <div class="pg-actions" data-bind="actions"></div>
+    </div>
+    <div class="filters" data-bind="filters"></div>
+    <div data-bind="table"></div>
+  </div>
+</template>
+```
+
+```javascript
+// controllers/admin/ProjectsController.js
+import { loadTemplate } from '../../utils/template.js';
+import { Table } from '../../components/ui/Table.js';
+import { Button } from '../../components/ui/Button.js';
+import { navigate } from '../../router.js';
+
+export default async function ProjectsController(params) {
+  const el = await loadTemplate('/templates/admin/projects.html', 'projects');
+  el.querySelector('[data-bind="actions"]').appendChild(
+    Button({ text: '+ New Project', variant: 'p', onClick: () => navigate('project-create') })
+  );
+  // ... populate table, filters
+  return el;
 }
 ```
 
-### Component Classes
-- Buttons: `.btn`, `.btn-p` (primary), `.btn-s` (secondary), `.btn-g` (ghost), `.btn-d` (danger)
-- Badges: `.badge`, `.b-ok`, `.b-warn`, `.b-err`, `.b-live`, `.b-pri`
+### Conventions
+- `data-bind="name"` — marks elements for dynamic content population
+- `data-action="cancel"` — marks elements for event listener attachment
+- `data-action="navBack"` with `data-to="route"` — breadcrumb back navigation
+- Templates use `loadTemplate('/templates/area/page.html', 'template-id')`
+
+## Design System
+Same CSS variables and component classes as before. See `src/styles/variables.css` for the full set.
+
+### Key Classes
+- Buttons: `.btn`, `.btn-p`, `.btn-s`, `.btn-g`, `.btn-d`, `.btn-ok`, `.btn-live`
+- Badges: `.badge`, `.b-ok`, `.b-warn`, `.b-err`, `.b-live`, `.b-summary`, `.b-ended`
 - Cards: `.card`, `.stat`, `.card-hdr`, `.card-body`
 - Tables: `.tbl-wrap`, `.tbl-hdr`, `.tbl-foot`
 - Forms: `.form-g`, `.form-l`, `.form-i`, `.form-sel`, `.form-ta`
-- Layout: `.topbar`, `.sidebar`, `.main`, `.page`
-
-## Patterns & Conventions
-
-### Component Pattern
-```javascript
-// components/ui/Button.js
-export function Button({ text, variant = 'primary', size = 'md', onClick }) {
-  const btn = document.createElement('button');
-  btn.className = `btn btn-${variant[0]} ${size === 'sm' ? 'btn-sm' : ''}`;
-  btn.textContent = text;
-  if (onClick) btn.addEventListener('click', onClick);
-  return btn;
-}
-```
-
-### Page Pattern
-```javascript
-// pages/admin/Dashboard.js
-import { api } from '../../api/client.js';
-import { StatCard } from '../../components/ui/Card.js';
-
-export async function DashboardPage() {
-  const container = document.createElement('div');
-  container.className = 'page';
-  container.id = 'p-dashboard';
-  
-  // Fetch data
-  const stats = await api.get('/dashboard/stats');
-  
-  // Render
-  container.innerHTML = `
-    <div class="pg-hdr">
-      <div>
-        <h1>Dashboard</h1>
-        <div class="pg-sub">Overview of your GMeet Agent system</div>
-      </div>
-    </div>
-    <div class="g g4 mb-6" id="stats-grid"></div>
-  `;
-  
-  // Populate stats
-  const grid = container.querySelector('#stats-grid');
-  stats.forEach(s => grid.appendChild(StatCard(s)));
-  
-  return container;
-}
-```
-
-### Router Pattern
-```javascript
-// router.js
-const routes = {
-  '/': () => import('./pages/admin/Dashboard.js'),
-  '/projects': () => import('./pages/admin/Projects.js'),
-  '/projects/:id': () => import('./pages/admin/ProjectDetail.js'),
-  // ...
-};
-
-export function navigate(path) {
-  window.history.pushState({}, '', path);
-  render(path);
-}
-
-async function render(path) {
-  const main = document.querySelector('.main');
-  const { default: Page } = await matchRoute(path);
-  main.innerHTML = '';
-  main.appendChild(await Page());
-}
-```
-
-### API Client Pattern
-```javascript
-// api/client.js
-const BASE_URL = import.meta.env.VITE_API_URL || '/api/v1';
-
-class ApiClient {
-  constructor() {
-    this.token = localStorage.getItem('token');
-  }
-
-  async request(endpoint, options = {}) {
-    const res = await fetch(`${BASE_URL}${endpoint}`, {
-      headers: {
-        'Content-Type': 'application/json',
-        ...(this.token && { Authorization: `Bearer ${this.token}` }),
-      },
-      ...options,
-    });
-    
-    if (res.status === 401) {
-      this.token = null;
-      localStorage.removeItem('token');
-      navigate('/login');
-      throw new Error('Unauthorized');
-    }
-    
-    if (!res.ok) throw new Error(await res.text());
-    return res.json();
-  }
-
-  get(endpoint) { return this.request(endpoint); }
-  post(endpoint, data) { return this.request(endpoint, { method: 'POST', body: JSON.stringify(data) }); }
-  put(endpoint, data) { return this.request(endpoint, { method: 'PUT', body: JSON.stringify(data) }); }
-  delete(endpoint) { return this.request(endpoint, { method: 'DELETE' }); }
-}
-
-export const api = new ApiClient();
-```
-
-### State Management Pattern
-```javascript
-// stores/auth.js
-const state = {
-  user: null,
-  token: localStorage.getItem('token'),
-  isAdmin: false,
-};
-
-const listeners = new Set();
-
-export const authStore = {
-  getState: () => ({ ...state }),
-  
-  subscribe: (fn) => {
-    listeners.add(fn);
-    return () => listeners.delete(fn);
-  },
-  
-  setUser: (user) => {
-    state.user = user;
-    state.isAdmin = user?.role === 'admin';
-    listeners.forEach(fn => fn(state));
-  },
-  
-  logout: () => {
-    state.user = null;
-    state.token = null;
-    localStorage.removeItem('token');
-    listeners.forEach(fn => fn(state));
-  },
-};
-```
-
-## API Endpoints (Expected)
-
-### Auth
-- `POST /auth/login` - Login
-- `POST /auth/logout` - Logout
-- `GET /auth/me` - Get current user
-
-### Projects
-- `GET /projects` - List projects
-- `GET /projects/:id` - Get project detail
-- `POST /projects` - Create project
-- `PUT /projects/:id` - Update project
-- `DELETE /projects/:id` - Delete project
-
-### Agents
-- `GET /agents` - List agents
-- `GET /agents/:id` - Get agent detail
-- `POST /agents` - Create agent
-- `PUT /agents/:id` - Update agent
-
-### Sessions
-- `GET /sessions` - List sessions
-- `GET /sessions/:id` - Get session detail
-- `GET /sessions/:id/qa` - Get Q&A pairs
-- `POST /sessions` - Create session
-
-### Knowledge Base
-- `GET /kb/folders` - List KB folders
-- `GET /kb/folders/:id/documents` - List documents
-- `POST /kb/documents` - Upload document
-
-## Portal Differences
-
-### Admin Portal
-- Logo icon color: `--pri-500` (blue)
-- Badge: "Admin Portal"
-- Menu: Dashboard, Projects, Agents, Skills, Gmail Credentials, Q&A Monitor, Token Usage, Audit Logs
-- Full CRUD access
-
-### User Portal
-- Logo icon color: `--ok-500` (green)
-- Badge: "User Portal"
-- Menu: Dashboard, Live Session (if active)
-- Collapsible sidebar
-- Read-only for most data
-- Focus on session management
+- Layout: `.topbar`, `.sidebar`, `.main`, `.page`, `.layout`
 
 ## File References
 - Admin UI template: #[[file:example/admin-portal-revised.html]]

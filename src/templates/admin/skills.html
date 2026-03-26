@@ -1,0 +1,18 @@
+<template id="skills">
+  <div class="page">
+    <div class="pg-hdr">
+      <div>
+        <h1>Skills</h1>
+        <div class="pg-sub">Skill instruction buckets — each bucket has a prefix and contains uploadable skill files injected into the agent</div>
+      </div>
+      <div class="pg-actions" data-bind="actions"></div>
+    </div>
+    <div class="filters" data-bind="filters"></div>
+    <div data-bind="bucketsList"></div>
+    <div class="card" style="background:var(--gray-25);border-color:var(--gray-100)">
+      <div class="card-body" style="padding:14px 20px">
+        <div class="text-xs text-t">⚡ Skill buckets work like Knowledge Base collections — each bucket has a prefix and contains uploadable instruction files. <strong>Real-time</strong> buckets are injected during sessions; <strong>post-session</strong> buckets trigger after a session ends. Skills are separate from a project's KB.</div>
+      </div>
+    </div>
+  </div>
+</template>
