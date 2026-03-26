@@ -2,9 +2,10 @@ import { loadTemplate } from '../../utils/template.js';
 import { Button } from '../../components/ui/Button.js';
 import { Table } from '../../components/ui/Table.js';
 import { Modal } from '../../components/ui/Modal.js';
+import { ConfirmDialog } from '../../components/ui/ConfirmDialog.js';
 import { usersApi } from '../../api/users.js';
 import { formatDate } from '../../utils/format.js';
-import { navigate } from '../../router.js';
+import { showLoading, hideLoading } from '../../components/ui/Loading.js';
 
 export default async function UsersController(params) {
   const el = await loadTemplate('/templates/admin/users.html', 'users');
@@ -136,6 +137,7 @@ export default async function UsersController(params) {
 
         submitBtn.disabled = true;
         submitBtn.textContent = 'Creating...';
+        showLoading('Creating user...');
 
         try {
           await usersApi.create(email);
@@ -145,6 +147,7 @@ export default async function UsersController(params) {
           errorEl.textContent = err.message;
           errorEl.style.display = 'block';
         } finally {
+          hideLoading();
           submitBtn.disabled = false;
           submitBtn.textContent = 'Create User';
         }
@@ -162,52 +165,12 @@ export default async function UsersController(params) {
   }
 
   function showDeleteConfirm(user) {
-    const body = document.createElement('div');
-    body.innerHTML = `
-      <p>Are you sure you want to delete user <strong>${user.email}</strong>?</p>
-      <p style="color: var(--err-600); font-size: 13px; margin-top: 12px;">This action cannot be undone.</p>
-    `;
-
-    const footer = document.createElement('div');
-    footer.style.display = 'flex';
-    footer.style.gap = '12px';
-    footer.style.justifyContent = 'flex-end';
-
-    let modal;
-
-    const cancelBtn = Button({
-      text: 'Cancel',
-      variant: 's',
-      onClick: () => modal.close()
-    });
-
-    const deleteBtn = Button({
-      text: 'Delete',
-      variant: 'd',
-      onClick: async () => {
-        deleteBtn.disabled = true;
-        deleteBtn.textContent = 'Deleting...';
-
-        try {
-          await usersApi.delete(user.user_id);
-          modal.close();
-          loadUsers();
-        } catch (err) {
-          alert(err.message);
-        } finally {
-          deleteBtn.disabled = false;
-          deleteBtn.textContent = 'Delete';
-        }
-      }
-    });
-
-    footer.appendChild(cancelBtn);
-    footer.appendChild(deleteBtn);
-
-    modal = Modal({
+    ConfirmDialog({
       title: 'Delete User',
-      body,
-      footer
+      message: `Are you sure you want to delete user <strong>${user.email}</strong>?`,
+      loadingMessage: 'Deleting user...',
+      onConfirm: () => usersApi.delete(user.user_id),
+      onSuccess: loadUsers
     });
   }
 

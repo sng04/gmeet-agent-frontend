@@ -8,9 +8,10 @@
     <div class="pg-hdr">
       <div>
         <h1>Create New Project</h1>
-        <div class="pg-sub">Set up a new project with agent and knowledge base configuration</div>
+        <div class="pg-sub">Set up a new project with agent and Gmail credential configuration</div>
       </div>
     </div>
+    <div data-bind="alertContainer"></div>
     <div class="card" style="max-width:680px">
       <div class="card-body">
         <div class="form-g">
@@ -19,27 +20,21 @@
         </div>
         <div class="form-g">
           <label class="form-l">Description</label>
-          <textarea class="form-ta" name="description" placeholder="Brief description of the project scope and purpose..."></textarea>
+          <textarea class="form-ta" name="description" rows="3" placeholder="Brief description of the project scope and purpose..."></textarea>
         </div>
         <div class="form-g">
-          <label class="form-l">Default Agent <span class="req">*</span></label>
-          <select class="form-sel" name="agent" data-bind="agentSelect">
+          <label class="form-l">Default Agent</label>
+          <select class="form-sel" name="agent_id" data-bind="agentSelect">
             <option value="">Select agent...</option>
           </select>
           <div class="form-h">The agent that will be used by default for sessions in this project.</div>
         </div>
         <div class="form-g">
-          <label class="form-l">Gmail Credential</label>
-          <select class="form-sel" name="gmail" data-bind="gmailSelect">
+          <label class="form-l">Gmail Credential <span class="req">*</span></label>
+          <select class="form-sel" name="bot_credential_id" data-bind="gmailSelect">
             <option value="">Select credential...</option>
           </select>
-          <div class="form-h">The Gmail account this project uses to join Google Meet sessions.</div>
-        </div>
-        <div class="divider"></div>
-        <div class="form-g">
-          <label class="form-l">Assign Initial Users</label>
-          <input class="form-i" name="users" placeholder="user@company.com, another@company.com">
-          <div class="form-h">Comma-separated emails. Users will receive an invite if they don't have an account.</div>
+          <div class="form-h">The Gmail account this project uses to join Google Meet sessions. Only verified & active credentials are shown.</div>
         </div>
         <div class="flex gap-3 mt-6 jc-end" data-bind="formActions"></div>
       </div>

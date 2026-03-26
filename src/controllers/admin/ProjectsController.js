@@ -1,48 +1,160 @@
 import { loadTemplate } from '../../utils/template.js';
-import { Table } from '../../components/ui/Table.js';
 import { Button } from '../../components/ui/Button.js';
-import { SearchBox, FilterSelect } from '../../components/ui/Form.js';
+import { SearchBox } from '../../components/ui/Form.js';
 import { navigate } from '../../router.js';
+import { projectsApi } from '../../api/projects.js';
+import { botCredentialApi } from '../../api/botCredential.js';
 
-const mockProjects = [
-  { id: '1', name: 'Acme Corp Sales', desc: 'Enterprise sales meetings with Acme Corp', agent: 'TechSales Bot', gmail: 'techsales-bot@agents.company.com', users: 4, sessions: 12 },
-  { id: '2', name: 'Global Logistics Demo', desc: 'Product demos for integration team', agent: 'Demo Agent', gmail: 'demo-bot@agents.company.com', users: 2, sessions: 5 },
-  { id: '3', name: 'Internal Training', desc: 'Internal team upskilling sessions', agent: 'TechSales Bot', gmail: null, users: 8, sessions: 3 },
-];
-
-export default async function ProjectsController(params) {
+export default async function ProjectsController() {
   const el = await loadTemplate('/templates/admin/projects.html', 'projects');
 
-  // Actions — New Project button
   el.querySelector('[data-bind="actions"]').appendChild(
     Button({ text: '+ New Project', variant: 'p', onClick: () => navigate('project-create') })
   );
 
-  // Filters — search + status filter
+  // Search box
   const filters = el.querySelector('[data-bind="filters"]');
-  filters.appendChild(SearchBox({ placeholder: 'Search projects...' }));
-  filters.appendChild(FilterSelect({
-    options: [
-      { value: '', label: 'All Status' },
-      { value: 'active', label: 'Active' },
-      { value: 'archived', label: 'Archived' },
-    ],
+  let searchTerm = '';
+  filters.appendChild(SearchBox({
+    placeholder: 'Search projects...',
+    onInput: (val) => {
+      searchTerm = val.toLowerCase();
+      renderProjects();
+    }
   }));
 
-  // Table
-  const table = Table({
-    columns: [
-      { label: 'Project Name', render: r => `<strong class="text-p">${r.name}</strong><div class="text-xs text-t mt-1">${r.desc}</div>` },
-      { label: 'Default Agent', key: 'agent' },
-      { label: 'Gmail Credential', render: r => r.gmail ? `<span class="mono text-sm">${r.gmail}</span>` : '<span class="text-t">—</span>' },
-      { label: 'Users', key: 'users' },
-      { label: 'Sessions', key: 'sessions' },
-      { label: '', render: r => `<button class="btn btn-g btn-sm" data-id="${r.id}">Open →</button>` },
-    ],
-    data: mockProjects.map(p => ({ ...p, _onClick: () => navigate('project-detail') })),
-    footer: `<span>${mockProjects.length} projects</span>`,
-  });
-  el.querySelector('[data-bind="table"]').appendChild(table);
+  let projects = [];
+  let credentialMap = {}; // { credential_id: email }
+
+  async function loadData() {
+    const tableContainer = el.querySelector('[data-bind="table"]');
+    tableContainer.innerHTML = `
+      <div class="loading">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Loading projects...</div>
+      </div>
+    `;
+
+    try {
+      // Fetch projects and credentials in parallel
+      const [projectsRes, credentialsRes] = await Promise.all([
+        projectsApi.list(),
+        botCredentialApi.list()
+      ]);
+
+      projects = projectsRes.data?.items || [];
+      
+      // Build credential lookup map
+      const credentials = credentialsRes.data?.items || [];
+      credentialMap = {};
+      credentials.forEach(c => {
+        credentialMap[c.credential_id] = c.email;
+      });
+
+      renderProjects();
+    } catch (err) {
+      console.error('Failed to load projects:', err);
+      tableContainer.innerHTML = `
+        <div class="empty">
+          <div class="empty-icon">⚠️</div>
+          <div class="empty-title">Failed to load projects</div>
+          <div class="empty-desc">${err.message}</div>
+        </div>
+      `;
+    }
+  }
+
+  function renderProjects() {
+    const tableContainer = el.querySelector('[data-bind="table"]');
+    
+    // Filter by search term
+    const filtered = projects.filter(p => 
+      !searchTerm || 
+      p.name?.toLowerCase().includes(searchTerm) ||
+      p.description?.toLowerCase().includes(searchTerm) ||
+      p.email?.toLowerCase().includes(searchTerm)
+    );
+
+    if (filtered.length === 0) {
+      tableContainer.innerHTML = `
+        <div class="empty">
+          <div class="empty-icon">📁</div>
+          <div class="empty-title">${searchTerm ? 'No matching projects' : 'No projects found'}</div>
+          <div class="empty-desc">${searchTerm ? 'Try a different search term' : 'Click "+ New Project" to create your first project'}</div>
+        </div>
+      `;
+      return;
+    }
+
+    const tableWrap = document.createElement('div');
+    tableWrap.className = 'tbl-wrap';
+    tableWrap.innerHTML = `
+      <table>
+        <thead>
+          <tr>
+            <th>Project Name</th>
+            <th>Default Agent</th>
+            <th>Gmail Credential</th>
+            <th>Users</th>
+            <th>Sessions</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <div class="tbl-foot">
+        <span>${filtered.length} project${filtered.length !== 1 ? 's' : ''}</span>
+      </div>
+    `;
+
+    const tbody = tableWrap.querySelector('tbody');
+
+    filtered.forEach(project => {
+      const tr = document.createElement('tr');
+      
+      // Get gmail email from credential map
+      const gmailEmail = project.bot_credential_id 
+        ? credentialMap[project.bot_credential_id] 
+        : null;
+
+      tr.innerHTML = `
+        <td>
+          <strong class="text-p">${project.name || '—'}</strong>
+          ${project.description ? `<div class="text-xs text-t mt-1">${project.description}</div>` : ''}
+        </td>
+        <td>${project.agent_id ? '<span class="text-t">—</span>' : '<span class="text-t">—</span>'}</td>
+        <td>${gmailEmail 
+          ? `<span class="mono text-sm">${gmailEmail}</span>` 
+          : '<span class="badge b-warn">Not assigned</span>'
+        }</td>
+        <td>${project.total_users ?? 0}</td>
+        <td>${project.total_sessions ?? 0}</td>
+        <td>
+          <button class="btn btn-g btn-sm" data-action="open" data-id="${project.project_id}">Open →</button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    tableContainer.innerHTML = '';
+    tableContainer.appendChild(tableWrap);
+
+    // Handle action buttons
+    tableContainer.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-action]');
+      if (!btn) return;
+
+      const action = btn.dataset.action;
+      const id = btn.dataset.id;
+
+      if (action === 'open') {
+        navigate(`projects/${id}`);
+      }
+    });
+  }
+
+  // Load data
+  loadData();
 
   return el;
 }

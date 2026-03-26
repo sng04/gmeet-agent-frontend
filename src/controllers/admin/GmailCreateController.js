@@ -1,6 +1,7 @@
 import { loadTemplate } from '../../utils/template.js';
 import { navigate } from '../../router.js';
 import { botCredentialApi } from '../../api/botCredential.js';
+import { showLoading, hideLoading } from '../../components/ui/Loading.js';
 
 export default async function GmailCreateController(params) {
   const el = await loadTemplate('/templates/admin/gmail-create.html', 'gmail-create');
@@ -52,6 +53,7 @@ export default async function GmailCreateController(params) {
     errorMsg.style.display = 'none';
     saveBtn.disabled = true;
     saveBtn.textContent = 'Creating...';
+    showLoading('Creating credential...');
 
     try {
       await botCredentialApi.create({
@@ -61,8 +63,10 @@ export default async function GmailCreateController(params) {
       });
 
       // Langsung ke list, polling akan dilakukan di sana
+      hideLoading();
       navigate('gmail');
     } catch (err) {
+      hideLoading();
       errorMsg.textContent = err.message || 'Failed to create credential';
       errorMsg.style.display = 'block';
       saveBtn.disabled = false;

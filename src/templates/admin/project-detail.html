@@ -3,82 +3,101 @@
     <div class="bc">
       <a href="#" class="nav-back" data-to="projects">Projects</a>
       <span class="sep">›</span>
-      <span class="cur" data-bind="projectName"></span>
+      <span class="cur" data-bind="projectName">Project</span>
     </div>
     <div class="pg-hdr">
       <div>
-        <h1 data-bind="title"></h1>
+        <h1 data-bind="title">Project Detail</h1>
         <div class="pg-sub" data-bind="description"></div>
       </div>
       <div class="pg-actions" data-bind="actions"></div>
     </div>
 
-    <!-- Live Session Banner -->
-    <div class="card mb-6" style="border-color:var(--err-500);background:var(--err-50)">
-      <div class="card-body" style="padding:14px 20px">
-        <div class="flex items-c gap-3">
-          <span class="badge b-live" style="font-size:12px;padding:4px 10px"><span class="dot"></span> Live Session</span>
-          <div>
-            <div class="text-sm fw-sb text-p">Integration Planning</div>
-            <div class="text-xs text-t">Started by Sarah Chen · 12 min ago · 3 Q&A pairs</div>
-          </div>
-          <button class="btn btn-s btn-sm" style="margin-left:auto" data-action="viewLive">View Live →</button>
-        </div>
+    <!-- Loading State -->
+    <div data-bind="pageLoading">
+      <div class="loading">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Loading project...</div>
       </div>
     </div>
 
-    <!-- Stats -->
-    <div class="g g5 mb-6">
-      <div class="stat" style="cursor:default">
-        <div class="stat-label">Default Agent</div>
-        <div class="stat-val" style="font-size:15px;margin-top:4px" data-bind="statAgent"></div>
-      </div>
-      <div class="stat" style="cursor:default">
-        <div class="stat-label">Gmail Credential</div>
-        <div class="stat-val" style="font-size:11px;font-weight:500;margin-top:4px;font-family:var(--mono);word-break:break-all" data-bind="statGmail"></div>
-      </div>
-      <div class="stat" style="cursor:default">
-        <div class="stat-label">KB Prefix</div>
-        <div class="stat-val" style="font-size:18px;margin-top:4px" data-bind="statKbPrefix"></div>
-      </div>
-      <div class="stat" style="cursor:default">
-        <div class="stat-label">Assigned Users</div>
-        <div class="stat-val" data-bind="statUsers"></div>
-      </div>
-      <div class="stat" style="cursor:default">
-        <div class="stat-label">Total Sessions</div>
-        <div class="stat-val" data-bind="statSessions"></div>
-      </div>
-    </div>
-
-    <!-- Knowledge Base Section -->
-    <div class="kb-folder mb-6">
-      <div class="kb-folder-hdr" data-action="kbToggle">
-        <div class="flex items-c gap-3">
-          <span style="font-size:18px">📚</span>
-          <div>
-            <div class="text-sm fw-sb">Knowledge Base</div>
-            <div class="text-xs text-t" data-bind="kbMeta"></div>
+    <!-- Content (hidden by default) -->
+    <div data-bind="pageContent" style="display:none">
+      <!-- Live Session Banner -->
+      <div class="card mb-6" style="border-color:var(--err-500);background:var(--err-50)">
+        <div class="card-body" style="padding:14px 20px">
+          <div class="flex items-c gap-3">
+            <span class="badge b-live" style="font-size:12px;padding:4px 10px"><span class="dot"></span> Live Session</span>
+            <div>
+              <div class="text-sm fw-sb text-p">Integration Planning</div>
+              <div class="text-xs text-t">Started by Sarah Chen · 12 min ago · 3 Q&A pairs</div>
+            </div>
+            <button class="btn btn-s btn-sm" style="margin-left:auto" data-action="viewLive">View Live →</button>
           </div>
         </div>
-        <div class="flex gap-2 items-c">
-          <span class="text-xs text-t" data-bind="kbToggleText">▲ collapse</span>
-          <label class="upload-zone" style="display:inline-flex;align-items:center;gap:6px;padding:4px 12px;margin:0;border-style:dashed;border-width:1px;cursor:pointer;font-size:12px;color:var(--pri-500);background:var(--pri-25)">📤 Upload Doc</label>
+      </div>
+
+      <!-- Stats -->
+      <div class="g g5 mb-6">
+        <div class="stat" style="cursor:default">
+          <div class="stat-label">Default Agent</div>
+          <div class="stat-val" style="font-size:15px;margin-top:4px" data-bind="statAgent"></div>
+        </div>
+        <div class="stat" style="cursor:default">
+          <div class="stat-label">Gmail Credential</div>
+          <div class="stat-val" style="font-size:11px;font-weight:500;margin-top:4px;font-family:var(--mono);word-break:break-all" data-bind="statGmail"></div>
+        </div>
+        <div class="stat" style="cursor:default">
+          <div class="stat-label">KB Prefix</div>
+          <div class="stat-val" style="font-size:18px;margin-top:4px" data-bind="statKbPrefix"></div>
+        </div>
+        <div class="stat" style="cursor:default">
+          <div class="stat-label">Assigned Users</div>
+          <div class="stat-val" data-bind="statUsers"></div>
+        </div>
+        <div class="stat" style="cursor:default">
+          <div class="stat-label">Total Sessions</div>
+          <div class="stat-val" data-bind="statSessions"></div>
         </div>
       </div>
-      <div data-bind="kbContent"></div>
+
+      <!-- Knowledge Base Section -->
+      <div class="kb-folder mb-6">
+        <div class="kb-folder-hdr" data-action="kbToggle">
+          <div class="flex items-c gap-3">
+            <span style="font-size:18px">📚</span>
+            <div>
+              <div class="text-sm fw-sb">Knowledge Base</div>
+              <div class="text-xs text-t" data-bind="kbMeta"></div>
+            </div>
+          </div>
+          <div class="flex gap-2 items-c">
+            <span class="text-xs text-t" data-bind="kbToggleText">▲ collapse</span>
+            <label class="upload-zone" style="display:inline-flex;align-items:center;gap:6px;padding:4px 12px;margin:0;border-style:dashed;border-width:1px;cursor:pointer;font-size:12px;color:var(--pri-500);background:var(--pri-25)">📤 Upload Doc</label>
+          </div>
+        </div>
+        <div data-bind="kbContent"></div>
+      </div>
+
+      <!-- Tabs -->
+      <div class="tabs">
+        <div class="tab active" data-tab="users">Assigned Users</div>
+        <div class="tab" data-tab="sessions">Session History</div>
+      </div>
+
+      <!-- Users Tab -->
+      <div class="tab-c active" data-bind="tabUsers">
+        <div class="loading">
+          <div class="loading-spinner"></div>
+          <div class="loading-text">Loading users...</div>
+        </div>
+      </div>
+
+      <!-- Sessions Tab -->
+      <div class="tab-c" data-bind="tabSessions"></div>
     </div>
 
-    <!-- Tabs -->
-    <div class="tabs">
-      <div class="tab active" data-tab="users">Assigned Users</div>
-      <div class="tab" data-tab="sessions">Session History</div>
-    </div>
-
-    <!-- Users Tab -->
-    <div class="tab-c active" data-bind="tabUsers"></div>
-
-    <!-- Sessions Tab -->
-    <div class="tab-c" data-bind="tabSessions"></div>
+    <!-- Error State (hidden by default) -->
+    <div data-bind="pageError" style="display:none"></div>
   </div>
 </template>
