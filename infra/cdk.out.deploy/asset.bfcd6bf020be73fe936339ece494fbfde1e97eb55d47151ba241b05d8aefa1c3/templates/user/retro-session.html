@@ -1,0 +1,133 @@
+<template id="retro-session">
+  <div class="page">
+    <div class="bc">
+      <a href="#" data-action="backProject">Acme Corp Sales</a>
+      <span class="sep">›</span>
+      <a href="#" data-action="backSessions">Sessions</a>
+      <span class="sep">›</span>
+      <span class="cur">Retrospective</span>
+    </div>
+    <div class="pg-hdr">
+      <div>
+        <h1 data-bind="purpose"></h1>
+        <div class="pg-sub">Project: <span data-bind="project"></span> · Completed <span data-bind="date"></span></div>
+      </div>
+      <div class="pg-actions">
+        <span class="badge b-summary"><span class="dot"></span> Finished</span>
+      </div>
+    </div>
+    <div class="sess-meta mb-5">
+      <div class="sess-meta-item"><span>🤖</span><strong>Agent:</strong> <span data-bind="metaAgent"></span></div><div class="sess-meta-div"></div>
+      <div class="sess-meta-item"><span>📁</span><strong>Project:</strong> <span data-bind="metaProject"></span></div><div class="sess-meta-div"></div>
+      <div class="sess-meta-item"><span>⏱️</span><strong>Duration:</strong> <span data-bind="metaDuration"></span></div><div class="sess-meta-div"></div>
+      <div class="sess-meta-item"><span>💬</span><strong>Q&A:</strong> <span data-bind="metaQA"></span> pairs</div><div class="sess-meta-div"></div>
+      <div class="sess-meta-item"><span>👥</span><strong>Participants:</strong> <span data-bind="metaParticipants"></span></div><div class="sess-meta-div"></div>
+      <div class="sess-meta-item"><span>📅</span><strong>Started:</strong> <span data-bind="metaStarted"></span></div><div class="sess-meta-div"></div>
+      <div class="sess-meta-item"><span>🏁</span><strong>Ended:</strong> <span data-bind="metaEnded"></span></div><div class="sess-meta-div"></div>
+      <div class="sess-meta-item"><span>📊</span><strong>Score:</strong> <span data-bind="metaScore"></span></div>
+    </div>
+    <div class="retro-layout">
+      <div>
+        <div class="tabs">
+          <div class="tab active" data-tab="summary">📋 Summary</div>
+          <div class="tab" data-tab="qa">💬 Q&A Pairs</div>
+          <div class="tab" data-tab="transcript">📝 Full Transcript</div>
+        </div>
+        <div class="tab-c active" id="tab-summary">
+          <div class="retro-s">
+            <div class="retro-s-hdr">
+              <div class="retro-s-icon" style="background:var(--pri-50);color:var(--pri-500)">📋</div>
+              <div class="retro-s-title">Meeting Summary</div>
+            </div>
+            <div class="retro-s-body">
+              <p style="font-size:13px;color:var(--gray-600);line-height:1.6" data-bind="summaryBody"></p>
+            </div>
+          </div>
+          <div class="retro-s">
+            <div class="retro-s-hdr">
+              <div class="retro-s-icon" style="background:var(--warn-50);color:var(--warn-500)">💡</div>
+              <div class="retro-s-title">Areas for Improvement</div>
+            </div>
+            <div class="retro-s-body">
+              <ul>
+                <li>Prepare a one-pager on compliance certifications for future meetings</li>
+                <li>Include latency benchmarks in the demo materials</li>
+                <li>Consider adding a live architecture diagram walkthrough</li>
+              </ul>
+            </div>
+          </div>
+          <div class="retro-s">
+            <div class="retro-s-hdr">
+              <div class="retro-s-icon" style="background:var(--err-50);color:var(--err-500)">⚠️</div>
+              <div class="retro-s-title">Missed Agenda Items</div>
+            </div>
+            <div class="retro-s-body">
+              <ul>
+                <li>Disaster recovery and failover strategy was not discussed</li>
+                <li>SLA terms were mentioned briefly but not covered in detail</li>
+              </ul>
+            </div>
+          </div>
+          <div class="retro-s">
+            <div class="retro-s-hdr">
+              <div class="retro-s-icon" style="background:var(--ok-50);color:var(--ok-500)">✅</div>
+              <div class="retro-s-title">Action Items / Next Steps</div>
+            </div>
+            <div class="retro-s-body">
+              <ul>
+                <li><strong>Sarah:</strong> Send compliance certification documents to Acme by Friday</li>
+                <li><strong>Mike:</strong> Schedule follow-up demo for integration team</li>
+                <li><strong>Sarah:</strong> Prepare SLA proposal document</li>
+              </ul>
+            </div>
+          </div>
+          <div class="retro-s">
+            <div class="retro-s-hdr">
+              <div class="retro-s-icon" style="background:var(--info-50);color:var(--info-500)">📊</div>
+              <div class="retro-s-title">Session Insights</div>
+            </div>
+            <div class="retro-s-body">
+              <p style="font-size:13px;color:var(--gray-600);line-height:1.6" data-bind="insightsBody"></p>
+            </div>
+          </div>
+        </div>
+        <div class="tab-c" id="tab-qa">
+          <div data-bind="qaList"></div>
+          <div class="text-xs text-t" style="text-align:center;padding:12px" data-bind="qaCountText"></div>
+        </div>
+        <div class="tab-c" id="tab-transcript">
+          <div class="card">
+            <div class="card-hdr">
+              <div class="text-md fw-sb">Full Transcript</div>
+              <div class="text-xs text-t">Raw speech-to-text output</div>
+            </div>
+            <div class="card-body">
+              <div class="tscript" data-bind="transcript"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="ai-chat-panel">
+        <div class="ai-chat-hdr">
+          <div style="background:var(--pri-50);color:var(--pri-500);width:30px;height:30px;border-radius:6px;display:grid;place-items:center;font-size:14px;flex-shrink:0">🤖</div>
+          <div>
+            <div class="ai-chat-title">AI Chat</div>
+            <div class="ai-chat-sub">Ask about this meeting</div>
+          </div>
+        </div>
+        <div class="ai-chat-msgs" data-bind="chatMsgs">
+          <div class="chat-msg ai"><div class="chat-label">MeetAgent AI</div>Hi Sarah! I've analyzed the Q3 Architecture Review session. You can ask me about key themes, missed points, or anything from the transcript.</div>
+        </div>
+        <div class="ai-chat-suggested">
+          <button class="ai-chip">Key themes?</button>
+          <button class="ai-chip">Draft follow-up email</button>
+          <button class="ai-chip">What was missed?</button>
+        </div>
+        <div class="ai-chat-input">
+          <input placeholder="Ask about this meeting..." data-bind="chatInput">
+          <button data-action="chatSend">➤</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>

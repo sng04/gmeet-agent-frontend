@@ -1,0 +1,48 @@
+<template id="skill-create">
+  <div class="page">
+    <div class="bc">
+      <a href="#" data-action="navBack" data-to="skills">Skills</a>
+      <span class="sep">›</span>
+      <span class="cur">New Skill</span>
+    </div>
+    <div class="pg-hdr">
+      <div>
+        <h1>Create Skill</h1>
+        <div class="pg-sub">Upload a knowledge document and attach it to an agent</div>
+      </div>
+    </div>
+    <div data-bind="formError" style="display:none"></div>
+    <div class="card" style="max-width:680px">
+      <div class="card-body">
+        <form id="skill-form">
+          <div class="form-g">
+            <label class="form-l">Agent <span class="req">*</span></label>
+            <select class="form-sel" name="agent_id" data-bind="agentSelect">
+              <option value="">Loading agents...</option>
+            </select>
+          </div>
+          <div class="form-g">
+            <label class="form-l">Skill Name <span class="req">*</span></label>
+            <input class="form-i" name="skill_name" placeholder="e.g. Product Pricing Guide" required>
+          </div>
+          <div class="form-g">
+            <label class="form-l">Description</label>
+            <textarea class="form-ta" name="description" rows="3" placeholder="Briefly describe this skill document..."></textarea>
+          </div>
+          <div class="form-g">
+            <label class="form-l">File <span class="req">*</span></label>
+            <div class="upload-zone" data-bind="uploadZone">
+              <div class="text-sm text-t">📤 Click or drag a file here (PDF or Markdown)</div>
+              <input type="file" name="file" accept=".pdf,.md,.markdown,.txt" style="display:none" data-bind="fileInput">
+            </div>
+            <div class="form-h" data-bind="fileName"></div>
+          </div>
+        </form>
+        <div class="flex gap-3 jc-end mt-6">
+          <button class="btn btn-s btn-lg" data-action="cancel">Cancel</button>
+          <button class="btn btn-p btn-lg" data-action="create">Create Skill</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>

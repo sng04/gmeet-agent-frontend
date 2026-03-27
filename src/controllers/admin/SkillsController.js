@@ -1,128 +1,139 @@
 import { loadTemplate } from '../../utils/template.js';
 import { Button } from '../../components/ui/Button.js';
-import { SearchBox, FilterSelect } from '../../components/ui/Form.js';
+import { Modal } from '../../components/ui/Modal.js';
+import { SearchBox } from '../../components/ui/Form.js';
 import { navigate } from '../../router.js';
+import { skillsApi } from '../../api/skills.js';
+import { formatDate } from '../../utils/format.js';
+import { extractList } from '../../utils/api-helpers.js';
 
-const mockSkillBuckets = [
-  {
-    id: '1',
-    name: 'Sales Skills',
-    prefix: 'sales-skills',
-    type: 'real-time',
-    fileCount: 3,
-    lastUpdated: 'Mar 15, 2026',
-    files: [
-      { name: 'objection-handling.txt', description: 'Handles common sales objections with rebuttals', size: '12 KB', status: 'verified', uploaded: 'Mar 10, 2026' },
-      { name: 'pricing-negotiation.txt', description: 'Pricing tiers and negotiation guidance', size: '8 KB', status: 'verified', uploaded: 'Mar 12, 2026' },
-      { name: 'follow-up-templates.txt', description: 'Email templates for post-meeting follow-ups', size: '15 KB', status: 'verified', uploaded: 'Mar 15, 2026' },
-    ],
-  },
-  {
-    id: '2',
-    name: 'Meeting Summary Skills',
-    prefix: 'summary-skills',
-    type: 'post-session',
-    fileCount: 1,
-    lastUpdated: 'Mar 10, 2026',
-    files: [
-      { name: 'meeting-summariser.txt', description: 'Formats Q&A pairs into structured meeting notes', size: '6 KB', status: 'verified', uploaded: 'Mar 10, 2026' },
-    ],
-  },
-];
-
-export default async function SkillsController(params) {
+export default async function SkillsController() {
   const el = await loadTemplate('/templates/admin/skills.html', 'skills');
 
-  // Actions — New Skill Bucket button
   el.querySelector('[data-bind="actions"]').appendChild(
-    Button({ text: '+ New Skill Bucket', variant: 'p', onClick: () => navigate('skill-create') })
+    Button({ text: '+ New Skill', variant: 'p', onClick: () => navigate('skill-create') })
   );
 
-  // Filters
+  const loadingEl = el.querySelector('[data-bind="loading"]');
+  const errorEl = el.querySelector('[data-bind="error"]');
+  const listEl = el.querySelector('[data-bind="skillsList"]');
+  let allSkills = [];
+
   const filters = el.querySelector('[data-bind="filters"]');
-  filters.appendChild(SearchBox({ placeholder: 'Search skill buckets...' }));
-  filters.appendChild(FilterSelect({
-    options: [
-      { value: '', label: 'All Types' },
-      { value: 'real-time', label: 'real-time' },
-      { value: 'post-session', label: 'post-session' },
-    ],
-  }));
+  const searchBox = SearchBox({ placeholder: 'Search skills...' });
+  filters.appendChild(searchBox);
 
-  // Build skill bucket folders
-  const bucketsList = el.querySelector('[data-bind="bucketsList"]');
+  async function load() {
+    loadingEl.style.display = '';
+    errorEl.style.display = 'none';
+    listEl.innerHTML = '';
+    try {
+      const res = await skillsApi.list();
+      allSkills = extractList(res);
+      loadingEl.style.display = 'none';
+      render(allSkills);
+    } catch (err) {
+      loadingEl.style.display = 'none';
+      errorEl.style.display = '';
+      errorEl.innerHTML = '<div class="empty"><div class="empty-icon">⚠️</div><div class="empty-title">Failed to load</div><div class="empty-desc">' + err.message + '</div></div>';
+    }
+  }
 
-  mockSkillBuckets.forEach(bucket => {
-    const folder = document.createElement('div');
-    folder.className = 'kb-folder';
-    folder.innerHTML = `
-      <div class="kb-folder-hdr" data-toggle="${bucket.id}">
-        <div class="flex items-c gap-3">
-          <span style="font-size:18px">⚡</span>
-          <div>
-            <div class="text-sm fw-sb">${bucket.name}</div>
-            <div class="text-xs text-t">${bucket.fileCount} skill files · Last updated ${bucket.lastUpdated}</div>
-          </div>
-          <span class="kb-folder-tag">prefix: ${bucket.prefix}</span>
-          <span class="badge ${bucket.type === 'real-time' ? 'b-info' : 'b-pri'}" style="margin-left:4px">${bucket.type}</span>
-        </div>
-        <div class="flex gap-2 items-c">
-          <span class="text-xs text-t" data-toggle-label="${bucket.id}">▲ collapse</span>
-          <label class="upload-zone" style="display:inline-flex;align-items:center;gap:6px;padding:4px 12px;margin:0;border-style:dashed;border-width:1px;cursor:pointer;font-size:12px;color:var(--pri-500);background:var(--pri-25)">📤 Upload Skill File</label>
-        </div>
-      </div>
-      <div data-toggle-content="${bucket.id}">
-        <table style="width:100%;border-collapse:collapse">
-          <thead>
-            <tr>
-              <th style="text-align:left;font-size:11px;font-weight:500;color:var(--gray-500);text-transform:uppercase;letter-spacing:.05em;padding:10px 20px;border-bottom:1px solid var(--gray-100);background:var(--gray-25)">Skill File</th>
-              <th style="text-align:left;font-size:11px;font-weight:500;color:var(--gray-500);text-transform:uppercase;padding:10px 20px;border-bottom:1px solid var(--gray-100);background:var(--gray-25)">Size</th>
-              <th style="text-align:left;font-size:11px;font-weight:500;color:var(--gray-500);text-transform:uppercase;padding:10px 20px;border-bottom:1px solid var(--gray-100);background:var(--gray-25)">Status</th>
-              <th style="text-align:left;font-size:11px;font-weight:500;color:var(--gray-500);text-transform:uppercase;padding:10px 20px;border-bottom:1px solid var(--gray-100);background:var(--gray-25)">Uploaded</th>
-              <th style="padding:10px 20px;border-bottom:1px solid var(--gray-100);background:var(--gray-25)"></th>
-            </tr>
-          </thead>
-          <tbody>
-            ${bucket.files.map((file, i) => `
-              <tr>
-                <td style="padding:12px 20px;${i < bucket.files.length - 1 ? 'border-bottom:1px solid var(--gray-100)' : ''}">
-                  <div class="flex items-c gap-3">
-                    <div class="doc-icon txt">📄</div>
-                    <div>
-                      <div class="text-sm fw-m text-p">${file.name}</div>
-                      <div class="text-xs text-t mt-1">${file.description}</div>
-                    </div>
-                  </div>
-                </td>
-                <td style="padding:12px 20px;font-family:var(--mono);font-size:13px;${i < bucket.files.length - 1 ? 'border-bottom:1px solid var(--gray-100)' : ''}">${file.size}</td>
-                <td style="padding:12px 20px;${i < bucket.files.length - 1 ? 'border-bottom:1px solid var(--gray-100)' : ''}"><span class="badge b-indexed"><span class="dot"></span> ${file.status}</span></td>
-                <td style="padding:12px 20px;font-size:12px;${i < bucket.files.length - 1 ? 'border-bottom:1px solid var(--gray-100)' : ''}">${file.uploaded}</td>
-                <td style="padding:12px 20px;${i < bucket.files.length - 1 ? 'border-bottom:1px solid var(--gray-100)' : ''}"><button class="btn btn-d btn-sm">Delete</button></td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      </div>
-    `;
-    bucketsList.appendChild(folder);
+  function render(skills) {
+    listEl.innerHTML = '';
+    if (!skills.length) {
+      listEl.innerHTML = '<div class="empty"><div class="empty-icon">📄</div><div class="empty-title">No skills yet</div><div class="empty-desc">Upload a knowledge document to get started</div></div>';
+      return;
+    }
+    skills.forEach(function(s) {
+      var card = document.createElement('div');
+      card.className = 'card mb-4';
+      card.innerHTML =
+        '<div class="card-hdr">' +
+          '<div><div class="text-md fw-sb">' + s.skill_name + '</div>' +
+          (s.description ? '<div class="text-xs text-t mt-1">' + s.description + '</div>' : '') + '</div>' +
+          '<div class="flex gap-2">' +
+            '<button class="btn btn-g btn-sm" data-edit-skill="' + s.skill_id + '">Edit</button>' +
+            '<button class="btn btn-d btn-sm" data-delete-skill="' + s.skill_id + '">Delete</button>' +
+          '</div>' +
+        '</div>' +
+        '<div class="card-body" style="padding:10px 20px;font-size:12px;color:var(--gray-500)">' +
+          '<span class="mono">' + (s.file_name || '—') + '</span>' +
+          (s.created_at ? ' · Created ' + formatDate(s.created_at) : '') +
+        '</div>';
+      listEl.appendChild(card);
+    });
+  }
+
+  searchBox.querySelector('input').addEventListener('input', function() {
+    var q = searchBox.querySelector('input').value.toLowerCase();
+    render(allSkills.filter(function(s) {
+      return (s.skill_name || '').toLowerCase().includes(q) || (s.file_name || '').toLowerCase().includes(q);
+    }));
   });
 
-  // Toggle folder collapse
-  el.addEventListener('click', (e) => {
-    const header = e.target.closest('[data-toggle]');
-    if (header && !e.target.closest('.upload-zone')) {
-      const id = header.dataset.toggle;
-      const content = el.querySelector(`[data-toggle-content="${id}"]`);
-      const toggle = el.querySelector(`[data-toggle-label="${id}"]`);
-      if (content.style.display === 'none') {
-        content.style.display = '';
-        toggle.textContent = '▲ collapse';
-      } else {
-        content.style.display = 'none';
-        toggle.textContent = '▼ expand';
-      }
+  el.addEventListener('click', async function(e) {
+    var delBtn = e.target.closest('[data-delete-skill]');
+    if (delBtn) {
+      if (!confirm('Delete this skill?')) return;
+      try { await skillsApi.delete(delBtn.dataset.deleteSkill); load(); }
+      catch (err) { alert(err.message); }
+      return;
+    }
+    var editBtn = e.target.closest('[data-edit-skill]');
+    if (editBtn) {
+      var skill = allSkills.find(function(s) { return s.skill_id === editBtn.dataset.editSkill; });
+      if (skill) showEditModal(skill);
     }
   });
 
+  function showEditModal(skill) {
+    var body = document.createElement('div');
+    body.innerHTML =
+      '<form id="edit-skill-form">' +
+        '<div class="form-g"><label class="form-l">Skill Name <span class="req">*</span></label>' +
+        '<input class="form-i" name="skill_name" value="' + (skill.skill_name || '') + '" required></div>' +
+        '<div class="form-g"><label class="form-l">Description</label>' +
+        '<textarea class="form-ta" name="description" rows="3">' + (skill.description || '') + '</textarea></div>' +
+        '<div class="form-g"><label class="form-l">Replace Document <span style="font-weight:400;color:var(--gray-400)">(optional)</span></label>' +
+        '<div class="text-xs text-t mb-2">Current: <span class="mono">' + (skill.file_name || '—') + '</span></div>' +
+        '<input type="file" id="edit-skill-file" accept=".pdf,.md,.markdown,.txt" class="form-i">' +
+        '<div class="form-h">Leave empty to keep the current document. Selecting a new file will replace it.</div></div>' +
+        '<div id="edit-skill-error" style="display:none;color:var(--err-600);font-size:13px;margin-top:8px"></div>' +
+      '</form>';
+    var footer = document.createElement('div');
+    footer.style.cssText = 'display:flex;gap:12px;justify-content:flex-end';
+    var modal;
+    var cancelBtn = Button({ text: 'Cancel', variant: 's', onClick: function() { modal.close(); } });
+    var saveBtn = Button({ text: 'Save', variant: 'p', onClick: async function() {
+      var fd = new FormData(body.querySelector('#edit-skill-form'));
+      var name = fd.get('skill_name');
+      var errEl = body.querySelector('#edit-skill-error');
+      var newFile = body.querySelector('#edit-skill-file').files[0];
+      if (!name) { errEl.textContent = 'Name is required.'; errEl.style.display = ''; return; }
+      saveBtn.disabled = true; saveBtn.textContent = 'Saving...'; errEl.style.display = 'none';
+      try {
+        // Update metadata
+        await skillsApi.update(skill.skill_id, { skill_name: name, description: fd.get('description') || '' });
+        // Replace document if a new file was selected
+        if (newFile) {
+          saveBtn.textContent = 'Replacing document...';
+          var replaceRes = await skillsApi.replaceDocument(skill.skill_id);
+          var uploadUrl = replaceRes.data?.upload_url;
+          if (uploadUrl) {
+            saveBtn.textContent = 'Uploading...';
+            await skillsApi.upload(uploadUrl, newFile);
+          }
+        }
+        modal.close(); load();
+      } catch (err) { errEl.textContent = err.message; errEl.style.display = ''; }
+      finally { saveBtn.disabled = false; saveBtn.textContent = 'Save'; }
+    }});
+    footer.appendChild(cancelBtn);
+    footer.appendChild(saveBtn);
+    modal = Modal({ title: 'Edit Skill', body: body, footer: footer });
+  }
+
+  load();
   return el;
 }

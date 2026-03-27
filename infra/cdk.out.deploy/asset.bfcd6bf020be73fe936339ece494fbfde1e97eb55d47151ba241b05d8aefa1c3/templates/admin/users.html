@@ -1,0 +1,23 @@
+<template id="users">
+  <div class="page">
+    <div class="pg-hdr">
+      <div>
+        <h1>Users</h1>
+        <div class="pg-sub">Manage user accounts</div>
+      </div>
+      <div class="pg-actions" data-bind="actions"></div>
+    </div>
+    <div class="filters">
+      <div class="search-box">
+        <span class="si">🔍</span>
+        <input placeholder="Search users..." data-bind="searchInput">
+      </div>
+    </div>
+    <div data-bind="usersTable">
+      <div class="loading">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Loading users...</div>
+      </div>
+    </div>
+  </div>
+</template>

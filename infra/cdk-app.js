@@ -83,6 +83,7 @@ class MeetAgentFrontendStack extends Stack {
 
 new MeetAgentFrontendStack(app, 'MeetAgentFrontend', {
   env: {
+    account: process.env.CDK_DEFAULT_ACCOUNT || '848332098006',
     region: 'ap-southeast-1',
   },
 });

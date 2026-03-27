@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "npx serve src -l 3000 -s",
+    "dev": "npx serve src -l 3000 -s --no-clipboard",
     "build": "echo 'No build step needed for vanilla JS'"
   }
 }

@@ -5,55 +5,121 @@
       <span class="sep">›</span>
       <span class="cur" data-bind="agentName"></span>
     </div>
-    <div class="agent-detail-hdr mb-6">
-      <div class="agent-avatar">🤖</div>
-      <div style="flex:1">
-        <div class="flex items-c gap-3 mb-1">
-          <h2 style="font-size:22px;font-weight:800" data-bind="agentTitle"></h2>
-          <span class="badge" data-bind="statusBadge"></span>
-        </div>
-        <div class="text-xs text-t" data-bind="agentMeta"></div>
-        <div class="text-xs text-t mt-1" data-bind="agentUpdated"></div>
-      </div>
-      <div class="flex gap-2" data-bind="actions"></div>
+    <div data-bind="loading" style="display:none">
+      <div class="loading"><div class="loading-spinner"></div><div class="loading-text">Loading agent...</div></div>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start">
-      <div>
-        <div class="card mb-6">
-          <div class="card-hdr">
-            <div class="text-md fw-sb">Current Role</div>
-            <div class="text-xs text-t mono" data-bind="roleDate"></div>
-          </div>
-          <div class="card-body" style="background:var(--gray-25)">
-            <p style="font-size:13px;line-height:1.7;color:var(--gray-700);white-space:pre-wrap;font-family:var(--mono)" data-bind="roleText"></p>
-          </div>
+    <div data-bind="error" style="display:none"></div>
+    <div data-bind="formError" style="display:none"></div>
+    <div data-bind="content" style="display:none">
+      <div class="agent-detail-hdr mb-6">
+        <div class="agent-avatar">🤖</div>
+        <div style="flex:1">
+          <h2 style="font-size:22px;font-weight:800" data-bind="agentTitle"></h2>
+          <div class="text-xs text-t mt-1" data-bind="agentMeta"></div>
         </div>
-        <div class="card mb-6">
-          <div class="card-hdr"><div class="text-md fw-sb">Role History</div></div>
-          <div data-bind="roleHistory"></div>
+        <div class="flex gap-2" data-bind="actions"></div>
+      </div>
+
+      <!-- VIEW MODE -->
+      <div data-bind="viewMode">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start">
+          <div>
+            <div class="card mb-6">
+              <div class="card-hdr"><div class="text-md fw-sb">Role Prompt</div></div>
+              <div class="card-body" style="background:var(--gray-25)">
+                <p style="font-size:13px;line-height:1.7;color:var(--gray-700);white-space:pre-wrap;font-family:var(--mono)" data-bind="roleText"></p>
+              </div>
+            </div>
+            <div class="card mb-6">
+              <div class="card-hdr"><div class="text-md fw-sb">Behavior Guidelines</div></div>
+              <div class="card-body" style="background:var(--gray-25)">
+                <p style="font-size:13px;line-height:1.7;color:var(--gray-700);white-space:pre-wrap;font-family:var(--mono)" data-bind="guidelinesText"></p>
+              </div>
+            </div>
+          </div>
+          <div>
+            <div class="card mb-6">
+              <div class="card-hdr"><div class="text-md fw-sb">Configuration</div></div>
+              <div class="card-body">
+                <div class="flex jc-b items-c" style="padding:6px 0">
+                  <span class="text-xs text-t">Personality</span>
+                  <span class="text-sm fw-m" data-bind="configPersonality"></span>
+                </div>
+              </div>
+            </div>
+            <div class="card mb-6">
+              <div class="card-hdr">
+                <div class="text-md fw-sb">Skills</div>
+              </div>
+              <div data-bind="viewSkillsList">
+                <div class="card-body text-xs text-t">No skills attached.</div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
-      <div>
-        <div class="card mb-6">
-          <div class="card-hdr"><div class="text-md fw-sb">Configuration</div></div>
-          <div class="card-body">
-            <div class="flex jc-b items-c" style="padding:6px 0;border-bottom:1px solid var(--gray-100)">
-              <span class="text-xs text-t">Agent Name</span>
-              <span class="text-sm fw-m" data-bind="configName"></span>
+
+      <!-- EDIT MODE -->
+      <div data-bind="editMode" style="display:none">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start">
+          <div>
+            <div class="card mb-6">
+              <div class="card-hdr"><div class="text-md fw-sb">Configuration</div></div>
+              <div class="card-body">
+                <form id="agent-form">
+                  <div class="form-g">
+                    <label class="form-l">Agent Name <span class="req">*</span></label>
+                    <input class="form-i" name="agent_name" required>
+                  </div>
+                  <div class="form-g">
+                    <label class="form-l">Personality <span class="req">*</span></label>
+                    <select class="form-sel" name="personality_id" data-bind="personalitySelect">
+                      <option value="">Loading...</option>
+                    </select>
+                  </div>
+                  <div class="divider"></div>
+                  <div class="form-g">
+                    <label class="form-l">Role Prompt <span class="req">*</span></label>
+                    <textarea class="form-ta" name="role_prompt" rows="6"></textarea>
+                  </div>
+                  <div class="form-g">
+                    <label class="form-l">Behavior Guidelines <span class="req">*</span></label>
+                    <textarea class="form-ta" name="behavior_guidelines" rows="6"></textarea>
+                  </div>
+                </form>
+              </div>
             </div>
-            <div class="flex jc-b items-c" style="padding:6px 0;border-bottom:1px solid var(--gray-100)">
-              <span class="text-xs text-t">Personality</span>
-              <span class="text-sm fw-m" data-bind="configPersonality"></span>
-            </div>
-            <div class="flex jc-b items-c" style="padding:6px 0">
-              <span class="text-xs text-t">Answering Tone</span>
-              <span class="text-sm fw-m" data-bind="configTone"></span>
+            <div class="card mb-6">
+              <div class="card-hdr">
+                <div class="text-md fw-sb">Skills</div>
+                <button class="btn btn-g btn-sm" data-action="addSkill">+ Attach Skill</button>
+              </div>
+              <div data-bind="editSkillsList">
+                <div class="card-body text-xs text-t">No skills attached.</div>
+              </div>
             </div>
           </div>
-        </div>
-        <div class="card">
-          <div class="card-hdr"><div class="text-md fw-sb">Assigned Projects</div></div>
-          <div class="card-body" style="display:flex;flex-direction:column;gap:10px" data-bind="projectsList"></div>
+          <div>
+            <div class="card mb-4">
+              <div class="card-hdr">
+                <div class="text-md fw-sb">Test Prompt</div>
+                <div class="text-xs text-t" data-bind="chatStatus">Test how the agent responds</div>
+              </div>
+              <div class="chat-test-panel" style="border:none;border-radius:0">
+                <div class="chat-test-msgs" data-bind="chatMsgs" style="min-height:280px;max-height:420px;overflow-y:auto">
+                  <div class="chat-test-row"><div class="chat-test-bubble ai-bubble" style="color:var(--gray-400)">Type a message below to test.</div></div>
+                </div>
+                <div class="chat-test-input">
+                  <input type="text" placeholder="Type a test message..." data-bind="chatInput">
+                  <button data-action="chatSend">Send</button>
+                </div>
+              </div>
+            </div>
+            <div class="flex gap-3 jc-end">
+              <button class="btn btn-s btn-lg" data-action="cancelEdit">Cancel</button>
+              <button class="btn btn-p btn-lg" data-action="save">Save Changes</button>
+            </div>
+          </div>
         </div>
       </div>
     </div>

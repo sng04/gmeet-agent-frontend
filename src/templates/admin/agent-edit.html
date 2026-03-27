@@ -3,85 +3,69 @@
     <div class="bc">
       <a href="#" data-action="navBack" data-to="agents">Agents</a>
       <span class="sep">›</span>
-      <a href="#" data-action="navBack" data-to="agent-detail">TechSales Bot</a>
+      <a href="#" data-action="navBack" data-to="agent-detail" data-bind="bcAgentLink"></a>
       <span class="sep">›</span>
       <span class="cur">Edit</span>
     </div>
     <div class="pg-hdr">
       <div>
         <h1>Edit Agent</h1>
-        <div class="pg-sub">TechSales Bot</div>
+        <div class="pg-sub" data-bind="editSubtitle"></div>
       </div>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start">
-      <div class="card">
-        <div class="card-hdr"><div class="text-md fw-sb">Configuration</div></div>
-        <div class="card-body">
-          <div class="form-g">
-            <label class="form-l">Agent Name</label>
-            <input class="form-i" value="TechSales Bot">
+    <div data-bind="loading" style="display:none">
+      <div class="loading"><div class="loading-spinner"></div><div class="loading-text">Loading agent...</div></div>
+    </div>
+    <div data-bind="formError" style="display:none"></div>
+    <div data-bind="content" style="display:none">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start">
+        <div class="card">
+          <div class="card-hdr"><div class="text-md fw-sb">Configuration</div></div>
+          <div class="card-body">
+            <form id="agent-form">
+              <div class="form-g">
+                <label class="form-l">Agent Name <span class="req">*</span></label>
+                <input class="form-i" name="agent_name" required>
+              </div>
+              <div class="form-g">
+                <label class="form-l">Personality <span class="req">*</span></label>
+                <select class="form-sel" name="personality_id" data-bind="personalitySelect">
+                  <option value="">Loading personalities...</option>
+                </select>
+              </div>
+              <div class="divider"></div>
+              <div class="form-g">
+                <label class="form-l">Role Prompt <span class="req">*</span></label>
+                <textarea class="form-ta" name="role_prompt" rows="6"></textarea>
+              </div>
+              <div class="form-g">
+                <label class="form-l">Behavior Guidelines <span class="req">*</span></label>
+                <textarea class="form-ta" name="behavior_guidelines" rows="6"></textarea>
+                <div class="form-h">Step-by-step task instructions for the agent during meetings.</div>
+              </div>
+            </form>
           </div>
-          <div class="divider"></div>
-          <div class="form-g">
-            <label class="form-l">Agent Objectives</label>
-            <textarea class="form-ta" rows="3">Answer technical questions about product capabilities, pricing, and integrations accurately and concisely.</textarea>
-          </div>
-          <div class="form-g">
-            <label class="form-l">Behavioral Guidelines</label>
-            <textarea class="form-ta" rows="3">Always be professional. Do not speculate outside the knowledge base. Cite source documents when applicable.</textarea>
-          </div>
-          <div class="form-g">
-            <label class="form-l">Personality Traits</label>
-            <input class="form-i" value="Professional, concise, confident">
-          </div>
-          <div class="form-g">
-            <label class="form-l">Answering Tone</label>
-            <select class="form-sel">
-              <option selected>Professional and neutral</option>
-              <option>Friendly and approachable</option>
-              <option>Concise and direct</option>
-            </select>
-          </div>
-          <div class="form-g">
-            <label class="form-l">Role</label>
-            <textarea class="form-ta" rows="6">You are TechSales Bot, a professional AI meeting assistant. Your objective is to answer technical questions accurately using the provided knowledge base. Always respond concisely and professionally. Reference specific documentation when possible. Do not speculate beyond provided context.</textarea>
-            <div class="form-h">Defines who the agent is and how it behaves. Changes apply within 5 seconds of saving.</div>
-          </div>
-          <div class="divider"></div>
-          <div class="form-g">
-            <label class="form-l">Skill Buckets <span style="font-weight:400;color:var(--gray-400)">(optional)</span></label>
-            <div style="border:1px solid var(--gray-200);border-radius:8px;overflow:hidden">
-              <div style="padding:8px 12px;background:var(--gray-25);border-bottom:1px solid var(--gray-100);font-size:11px;color:var(--gray-500)">Hold Ctrl / Cmd to select multiple</div>
-              <select class="form-sel" multiple size="4" style="border:none;border-radius:0;padding:0;background:var(--white);height:auto;appearance:auto;background-image:none">
-                <option value="sales-skills" selected style="padding:10px 14px;font-size:13px">⚡ Sales Skills · real-time · prefix: sales-skills</option>
-                <option value="summary-skills" style="padding:10px 14px;font-size:13px">⚡ Meeting Summary Skills · post-session · prefix: summary-skills</option>
-              </select>
+        </div>
+        <div>
+          <div class="card mb-4">
+            <div class="card-hdr">
+              <div class="text-md fw-sb">Test Prompt</div>
+              <div class="text-xs text-t" data-bind="chatStatus">Edit the prompts, then test how the agent responds</div>
             </div>
-            <div class="form-h">Skill bucket instructions will be injected alongside this agent's role during sessions.</div>
+            <div class="chat-test-panel" style="border:none;border-radius:0">
+              <div class="chat-test-msgs" data-bind="chatMsgs" style="min-height:280px;max-height:420px;overflow-y:auto">
+                <div class="chat-test-row"><div class="chat-test-bubble ai-bubble" style="color:var(--gray-400)">Type a message below to test the current prompts.</div></div>
+              </div>
+              <div class="chat-test-input">
+                <input type="text" placeholder="Type a test message..." data-bind="chatInput">
+                <button data-action="chatSend">Send</button>
+              </div>
+            </div>
           </div>
-          <div class="flex gap-3 jc-b mt-4">
-            <button class="btn btn-s" data-action="cancel">Cancel</button>
-            <button class="btn btn-warn" data-action="loadTest">Load to Test →</button>
+          <div class="flex gap-3 jc-end">
+            <button class="btn btn-s btn-lg" data-action="cancel">Cancel</button>
+            <button class="btn btn-p btn-lg" data-action="save">Save Changes</button>
           </div>
-        </div>
-      </div>
-      <div class="card">
-        <div class="card-hdr">
-          <div class="text-md fw-sb">Test Prompt</div>
-          <div class="text-xs text-t">Loaded from draft — not saved yet</div>
-        </div>
-        <div class="chat-test-panel" style="border:none;border-radius:0">
-          <div class="chat-test-msgs" data-bind="testMsgs">
-            <div class="chat-test-item ai"><div class="agent-lbl">TechSales Bot</div>Hello! I'm TechSales Bot. Click "Load to Test" after editing the role to preview changes here.</div>
-          </div>
-          <div class="chat-test-input">
-            <input type="text" placeholder="Type a test question..." data-bind="testInput">
-            <button data-action="testSend">Send</button>
-          </div>
-        </div>
-        <div class="card-foot" style="display:flex;justify-content:flex-end;gap:12px">
-          <button class="btn btn-s" data-action="discard">Discard</button>
-          <button class="btn btn-p" data-action="save">Save Changes</button>
         </div>
       </div>
     </div>
