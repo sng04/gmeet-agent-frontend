@@ -3,6 +3,7 @@ import { authStore } from '../../stores/auth.js';
 import { appStore } from '../../stores/app.js';
 import { authApi } from '../../api/auth.js';
 import { api } from '../../api/client.js';
+import { sessionsApi } from '../../api/sessions.js';
 import { navigate } from '../../router.js';
 
 const adminMenu = [
@@ -24,12 +25,10 @@ const adminMenu = [
   ]},
 ];
 
-const userMenu = [
+// Base user menu without live sessions (will be populated dynamically)
+const userMenuBase = [
   { group: 'Navigation', items: [
     { id: '', icon: '📊', label: 'Dashboard' },
-  ]},
-  { group: 'Active Now', items: [
-    { id: 'live-session', icon: '🔴', label: 'Live Session', badge: '1', live: true },
   ]},
 ];
 
@@ -103,14 +102,15 @@ export default async function LayoutController() {
 
   // --- Sidebar population ---
   const sidebar = el.querySelector('#sidebar');
-  const menu = isAdmin ? adminMenu : userMenu;
+  const navContainer = el.querySelector('[data-bind="navContainer"]');
 
   if (sidebarCollapsed) sidebar.classList.add('collapsed');
 
   const currentPath = window.location.pathname.slice(1).split('/')[0];
-  const navContainer = el.querySelector('[data-bind="navContainer"]');
-  if (navContainer) {
-    navContainer.innerHTML = menu.map(group => `
+
+  // Function to render navigation
+  function renderNav(menu, liveSessions = [], loading = false) {
+    let html = menu.map(group => `
       <div class="nav-group">
         <div class="nav-label">${group.group}</div>
         ${group.items.map(item => `
@@ -121,15 +121,67 @@ export default async function LayoutController() {
         `).join('')}
       </div>
     `).join('');
+
+    // Add Active Now section for user portal
+    if (!isAdmin) {
+      html += `
+        <div class="nav-group">
+          <div class="nav-label">Active Now</div>
+          ${loading ? `
+            <div class="nav-item" style="opacity:0.5;pointer-events:none">
+              <span class="nav-icon">⏳</span>Loading...
+            </div>
+          ` : liveSessions.length > 0 ? liveSessions.map(s => `
+            <div class="nav-item live-session-item" data-session-id="${s.session_id}">
+              <span class="nav-icon">🔴</span>${s.name || 'Untitled Session'}
+            </div>
+          `).join('') : `
+            <div class="nav-item" style="opacity:0.5;pointer-events:none">
+              <span class="nav-icon">—</span>No live sessions
+            </div>
+          `}
+        </div>
+      `;
+    }
+
+    navContainer.innerHTML = html;
+
+    // Attach click events
+    el.querySelectorAll('.nav-item[data-page]').forEach(item => {
+      item.addEventListener('click', () => {
+        el.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+        item.classList.add('active');
+        navigate(item.dataset.page);
+      });
+    });
+
+    // Attach click events for live sessions
+    el.querySelectorAll('.live-session-item').forEach(item => {
+      item.addEventListener('click', () => {
+        el.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+        item.classList.add('active');
+        navigate('live?sessionId=' + item.dataset.sessionId);
+      });
+    });
   }
 
-  el.querySelectorAll('.nav-item').forEach(item => {
-    item.addEventListener('click', () => {
-      el.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
-      item.classList.add('active');
-      navigate(item.dataset.page);
+  // Initial render with loading state for user portal
+  const menu = isAdmin ? adminMenu : userMenuBase;
+  renderNav(menu, [], !isAdmin);
+
+  // Load live sessions for user portal
+  if (!isAdmin) {
+    sessionsApi.list({ limit: 50 }).then(res => {
+      const sessions = res.data?.items || [];
+      const liveSessions = sessions.filter(s => 
+        s.bot_status === 'in_meeting' || s.bot_status === 'running'
+      );
+      renderNav(userMenuBase, liveSessions, false);
+    }).catch(err => {
+      console.warn('Failed to load live sessions:', err);
+      renderNav(userMenuBase, [], false);
     });
-  });
+  }
 
   appStore.subscribe((state) => {
     sidebar.classList.toggle('collapsed', state.sidebarCollapsed);

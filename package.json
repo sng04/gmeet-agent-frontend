@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "npx serve src -l 3000 -s --no-clipboard",
-    "build": "echo 'No build step needed for vanilla JS'"
+    "build": "echo 'No build step needed for vanilla JS'",
+    "deploy": "cd infra && npx cdk deploy --require-approval never"
   }
 }

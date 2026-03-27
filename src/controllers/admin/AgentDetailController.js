@@ -67,11 +67,13 @@ export default async function AgentDetailController(params) {
 
   // Actions
   var actionsEl = el.querySelector('[data-bind="actions"]');
-  actionsEl.appendChild(Button({ text: 'Edit', variant: 's', onClick: enterEditMode }));
-  actionsEl.appendChild(Button({ text: 'Delete', variant: 'd', onClick: async function() {
+  var editBtn = Button({ text: 'Edit', variant: 's', onClick: enterEditMode });
+  var deleteBtn = Button({ text: 'Delete', variant: 'd', onClick: async function() {
     if (!confirm('Delete this agent?')) return;
     try { await agentsApi.delete(agentId); navigate('agents'); } catch (err) { alert(err.message); }
-  }}));
+  }});
+  actionsEl.appendChild(editBtn);
+  actionsEl.appendChild(deleteBtn);
 
   // Edit mode form
   var form = el.querySelector('#agent-form');
@@ -92,12 +94,20 @@ export default async function AgentDetailController(params) {
     viewMode.style.display = 'none';
     editMode.style.display = '';
     renderEditSkills(skills);
+    // Swap Edit button to Back button
+    editBtn.textContent = '← Back';
+    editBtn.onclick = exitEditMode;
+    deleteBtn.style.display = 'none';
   }
 
   function exitEditMode() {
     editMode.style.display = 'none';
     viewMode.style.display = '';
     formErrorEl.style.display = 'none';
+    // Swap Back button to Edit button
+    editBtn.textContent = 'Edit';
+    editBtn.onclick = enterEditMode;
+    deleteBtn.style.display = '';
   }
 
   el.querySelector('[data-action="cancelEdit"]').addEventListener('click', exitEditMode);

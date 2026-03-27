@@ -77,7 +77,7 @@ export default async function UserChangePasswordController() {
     errorEl.style.display = 'none';
 
     try {
-      const response = await authApi.respondToChallenge(
+      const response = await authApi.changePassword(
         challengeSession,
         challengeUsername,
         newPassword

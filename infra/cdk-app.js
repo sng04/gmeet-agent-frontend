@@ -7,7 +7,7 @@ import {
   CachePolicy,
   OriginAccessIdentity,
 } from 'aws-cdk-lib/aws-cloudfront';
-import { S3Origin } from 'aws-cdk-lib/aws-cloudfront-origins';
+import { S3BucketOrigin } from 'aws-cdk-lib/aws-cloudfront-origins';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -38,7 +38,7 @@ class MeetAgentFrontendStack extends Stack {
     // CloudFront distribution
     const distribution = new Distribution(this, 'Distribution', {
       defaultBehavior: {
-        origin: new S3Origin(siteBucket, { originAccessIdentity: oai }),
+        origin: S3BucketOrigin.withOriginAccessIdentity(siteBucket, { originAccessIdentity: oai }),
         viewerProtocolPolicy: ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
         cachePolicy: CachePolicy.CACHING_OPTIMIZED,
       },

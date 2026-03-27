@@ -1,9 +1,11 @@
 import { loadTemplate } from '../../utils/template.js';
 import { Button } from '../../components/ui/Button.js';
 import { Alert } from '../../components/ui/Alert.js';
-import { getVerificationBadge, getStatusBadge, getContainerStatusBadge } from '../../components/ui/Badge.js';
+import { ConfirmDialog } from '../../components/ui/ConfirmDialog.js';
+import { getVerificationBadge, getContainerStatusBadge } from '../../components/ui/Badge.js';
 import { navigate } from '../../router.js';
 import { botCredentialApi } from '../../api/botCredential.js';
+import { botPoolApi } from '../../api/botPool.js';
 
 export default async function GmailCredentialsController(params) {
   const el = await loadTemplate('/templates/admin/gmail-credentials.html', 'gmail-credentials');
@@ -22,6 +24,16 @@ export default async function GmailCredentialsController(params) {
   );
 
   let credentials = [];
+  let pollingIntervals = new Map(); 
+
+  // Cleanup polling on page leave
+  function cleanup() {
+    pollingIntervals.forEach(intervalId => clearInterval(intervalId));
+    pollingIntervals.clear();
+  }
+
+  // Store cleanup function for router to call
+  el._cleanup = cleanup;
 
   async function loadCredentials() {
     const tableContainer = el.querySelector('[data-bind="credentialsList"]');
@@ -30,6 +42,7 @@ export default async function GmailCredentialsController(params) {
       const response = await botCredentialApi.list();
       credentials = response.data?.items || [];
       renderCredentials();
+      startPollingForValidating();
     } catch (err) {
       console.error('Failed to load credentials:', err);
       tableContainer.innerHTML = `
@@ -42,15 +55,64 @@ export default async function GmailCredentialsController(params) {
     }
   }
 
-  async function handleDelete(credentialId, email) {
-    if (!confirm(`Are you sure you want to remove credential "${email}"?`)) return;
+  // Poll verification status for validating credentials
+  function startPollingForValidating() {
+    // Clear existing polls
+    pollingIntervals.forEach(intervalId => clearInterval(intervalId));
+    pollingIntervals.clear();
 
-    try {
-      await botCredentialApi.delete(credentialId);
-      await loadCredentials();
-    } catch (err) {
-      alert(`Failed to delete: ${err.message}`);
-    }
+    credentials.forEach(cred => {
+      if (cred.verification_status === 'validating') {
+        pollCredential(cred.credential_id);
+      }
+    });
+  }
+
+  async function pollCredential(credentialId) {
+    const poll = async () => {
+      try {
+        const response = await botCredentialApi.checkVerification(credentialId);
+        const status = response.data?.verification_status;
+
+        if (status !== 'validating') {
+          // Status changed, stop polling and reload
+          clearInterval(pollingIntervals.get(credentialId));
+          pollingIntervals.delete(credentialId);
+
+          // If verified, auto-start warm pool
+          if (status === 'verified') {
+            const cred = credentials.find(c => c.credential_id === credentialId);
+            if (cred && cred.warm_pool_size > 0) {
+              try {
+                await botPoolApi.start({ credential_ids: [credentialId] });
+              } catch (poolErr) {
+                console.warn('Failed to start warm pool:', poolErr);
+              }
+            }
+          }
+
+          // Reload list to show updated status
+          loadCredentials();
+        }
+      } catch (err) {
+        console.warn('Poll error:', err);
+      }
+    };
+
+    // Poll immediately then every 2 seconds
+    poll();
+    const intervalId = setInterval(poll, 2000);
+    pollingIntervals.set(credentialId, intervalId);
+  }
+
+  function handleDelete(credentialId, email) {
+    ConfirmDialog({
+      title: 'Delete Credential',
+      message: `Are you sure you want to remove credential <strong>${email}</strong>?`,
+      loadingMessage: 'Removing credential...',
+      onConfirm: () => botCredentialApi.delete(credentialId),
+      onSuccess: loadCredentials
+    });
   }
 
   async function toggleExpand(credentialId, expandRow) {
@@ -99,6 +161,27 @@ export default async function GmailCredentialsController(params) {
     }
   }
 
+  function getStatusText(cred) {
+    // Status is auto-determined by verification
+    if (cred.verification_status === 'verified') {
+      return '<span style="color:var(--ok-600)">Active</span>';
+    } else if (cred.verification_status === 'validating') {
+      return '<span style="color:var(--info-600)">Pending</span>';
+    } else {
+      return '<span style="color:var(--gray-500)">Inactive</span>';
+    }
+  }
+
+  function getPoolStatusText(cred) {
+    // Only show pool status for verified credentials
+    if (cred.verification_status !== 'verified') {
+      return '—';
+    }
+    const pool = cred.warm_pool_status;
+    if (!pool) return '—';
+    return `<span style="color:var(--ok-500)">${pool.idle || 0} idle</span> / <span style="color:var(--warn-500)">${pool.busy || 0} busy</span>`;
+  }
+
   function renderCredentials() {
     const tableContainer = el.querySelector('[data-bind="credentialsList"]');
 
@@ -123,7 +206,8 @@ export default async function GmailCredentialsController(params) {
             <th>Gmail Account</th>
             <th>Verification</th>
             <th>Status</th>
-            <th>Warm Pool Size</th>
+            <th>Pool Size</th>
+            <th>Pool Status</th>
             <th></th>
           </tr>
         </thead>
@@ -139,44 +223,53 @@ export default async function GmailCredentialsController(params) {
     credentials.forEach(cred => {
       // Main row
       const tr = document.createElement('tr');
+      const isVerified = cred.verification_status === 'verified';
+      const isFailed = cred.verification_status === 'verification_failed';
+
       tr.innerHTML = `
         <td>
-          <button class="btn btn-g btn-sm expand-btn" data-id="${cred.credential_id}" style="padding:4px 8px">
+          <button class="btn btn-g btn-sm expand-btn" data-id="${cred.credential_id}" style="padding:4px 8px" ${!isVerified ? 'disabled style="opacity:0.3;cursor:not-allowed"' : ''}>
             <span class="expand-icon">▶</span>
           </button>
         </td>
-        <td><span class="mono text-sm">${cred.email}</span></td>
+        <td>
+          <span class="mono text-sm">${cred.email}</span>
+          ${isFailed && cred.verification_error ? `<div class="text-xs" style="color:var(--err-500);margin-top:2px">${cred.verification_error}</div>` : ''}
+        </td>
         <td>${getVerificationBadge(cred.verification_status)}</td>
-        <td>${getStatusBadge(cred.available_status)}</td>
+        <td>${getStatusText(cred)}</td>
         <td>${cred.warm_pool_size || 0}</td>
+        <td>${getPoolStatusText(cred)}</td>
         <td>
           <div class="flex gap-2 jc-end">
-            <button class="btn btn-s btn-sm" data-action="edit" data-id="${cred.credential_id}">Edit</button>
+            <button class="btn btn-s btn-sm" data-action="edit" data-id="${cred.credential_id}">${isFailed ? 'Retry' : 'Edit'}</button>
             <button class="btn btn-d btn-sm" data-action="delete" data-id="${cred.credential_id}" data-email="${cred.email}">Remove</button>
           </div>
         </td>
       `;
       tbody.appendChild(tr);
 
-      // Expandable row for pool
-      const expandRow = document.createElement('tr');
-      expandRow.className = 'expand-row';
-      expandRow.style.display = 'none';
-      expandRow.innerHTML = `
-        <td colspan="6" style="padding:0;background:var(--gray-50)">
-          <div class="pool-content" style="padding:16px 20px"></div>
-        </td>
-      `;
-      tbody.appendChild(expandRow);
+      // Expandable row for pool (only for verified)
+      if (isVerified) {
+        const expandRow = document.createElement('tr');
+        expandRow.className = 'expand-row';
+        expandRow.style.display = 'none';
+        expandRow.innerHTML = `
+          <td colspan="7" style="padding:0;background:var(--gray-50)">
+            <div class="pool-content" style="padding:16px 20px"></div>
+          </td>
+        `;
+        tbody.appendChild(expandRow);
 
-      // Expand button click
-      tr.querySelector('.expand-btn').addEventListener('click', (e) => {
-        e.stopPropagation();
-        const icon = tr.querySelector('.expand-icon');
-        const isExpanded = expandRow.style.display !== 'none';
-        icon.textContent = isExpanded ? '▶' : '▼';
-        toggleExpand(cred.credential_id, expandRow);
-      });
+        // Expand button click
+        tr.querySelector('.expand-btn').addEventListener('click', (e) => {
+          e.stopPropagation();
+          const icon = tr.querySelector('.expand-icon');
+          const isExpanded = expandRow.style.display !== 'none';
+          icon.textContent = isExpanded ? '▶' : '▼';
+          toggleExpand(cred.credential_id, expandRow);
+        });
+      }
     });
 
     tableContainer.innerHTML = '';

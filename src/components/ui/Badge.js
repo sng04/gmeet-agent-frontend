@@ -16,6 +16,12 @@ export function getVerificationBadge(status) {
   if (status === 'verified') {
     return '<span class="badge b-ok"><span class="dot"></span> verified</span>';
   }
+  if (status === 'validating') {
+    return '<span class="badge b-info"><span class="badge-spinner"></span> validating</span>';
+  }
+  if (status === 'verification_failed') {
+    return '<span class="badge b-err"><span class="dot"></span> failed</span>';
+  }
   return '<span class="badge b-warn"><span class="dot"></span> not verified</span>';
 }
 

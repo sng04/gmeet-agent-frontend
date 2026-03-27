@@ -1,7 +1,7 @@
 import { loadTemplate } from '../../utils/template.js';
 import { navigate } from '../../router.js';
 import { botCredentialApi } from '../../api/botCredential.js';
-import { botPoolApi } from '../../api/botPool.js';
+import { showLoading, hideLoading } from '../../components/ui/Loading.js';
 
 export default async function GmailCreateController(params) {
   const el = await loadTemplate('/templates/admin/gmail-create.html', 'gmail-create');
@@ -53,29 +53,20 @@ export default async function GmailCreateController(params) {
     errorMsg.style.display = 'none';
     saveBtn.disabled = true;
     saveBtn.textContent = 'Creating...';
+    showLoading('Creating credential...');
 
     try {
-      const response = await botCredentialApi.create({
+      await botCredentialApi.create({
         email,
         password,
         warm_pool_size: warmPoolSize,
       });
 
-      const credentialId = response.data?.credential_id;
-
-      // Auto start warm pool if size > 0
-      if (warmPoolSize > 0 && credentialId) {
-        try {
-          await botPoolApi.start({
-            credential_ids: [credentialId],
-          });
-        } catch (poolErr) {
-          console.warn('Failed to start warm pool:', poolErr);
-        }
-      }
-
+      // Langsung ke list, polling akan dilakukan di sana
+      hideLoading();
       navigate('gmail');
     } catch (err) {
+      hideLoading();
       errorMsg.textContent = err.message || 'Failed to create credential';
       errorMsg.style.display = 'block';
       saveBtn.disabled = false;

@@ -3,31 +3,41 @@
     <div class="bc">
       <a href="#" data-action="backNav">My Projects</a>
       <span class="sep">›</span>
-      <span class="cur" data-bind="projectName"></span>
+      <span class="cur" data-bind="projectName">Project</span>
     </div>
     <div class="pg-hdr">
       <div>
-        <h1 data-bind="title"></h1>
+        <h1 data-bind="title">Project Detail</h1>
         <div class="pg-sub" data-bind="description"></div>
       </div>
       <div class="pg-actions" data-bind="actions"></div>
     </div>
 
-    <!-- Live Session Banner -->
-    <div class="card mb-6" style="border-color:var(--err-500);background:var(--err-50)">
-      <div class="card-body" style="padding:14px 20px">
-        <div class="flex items-c gap-3">
-          <span class="badge b-live" style="font-size:12px;padding:4px 10px"><span class="dot"></span> Live Session</span>
-          <div>
-            <div class="text-sm fw-sb text-p">Integration Planning</div>
-            <div class="text-xs text-t">Started by you · 12 min ago · 3 Q&A pairs</div>
-          </div>
-          <button class="btn btn-live btn-sm" style="margin-left:auto" data-action="openLive">Open Live View →</button>
-        </div>
+    <!-- Loading State -->
+    <div data-bind="pageLoading">
+      <div class="loading">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Loading project...</div>
       </div>
     </div>
 
-    <!-- Stats -->
+    <!-- Content (hidden by default) -->
+    <div data-bind="pageContent" style="display:none">
+      <!-- Live Session Banner -->
+      <div class="card mb-6" style="border-color:var(--err-500);background:var(--err-50)" data-bind="liveBanner">
+        <div class="card-body" style="padding:14px 20px">
+          <div class="flex items-c gap-3">
+            <span class="badge b-live" style="font-size:12px;padding:4px 10px"><span class="dot"></span> Live Session</span>
+            <div>
+              <div class="text-sm fw-sb text-p">Integration Planning</div>
+              <div class="text-xs text-t">Started by you · 12 min ago · 3 Q&A pairs</div>
+            </div>
+            <button class="btn btn-live btn-sm" style="margin-left:auto" data-action="openLive">Open Live View →</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stats -->
     <div class="g g3 mb-6">
       <div class="stat" style="cursor:default">
         <div class="stat-label">Default Agent</div>
@@ -52,22 +62,38 @@
 
     <!-- Sessions Tab -->
     <div class="tab-c active" id="tab-sessions">
-      <div class="tbl-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Purpose</th>
-              <th>Status</th>
-              <th>Agent</th>
-              <th>Q&A</th>
-              <th>Duration</th>
-              <th style="text-align:right">Action</th>
-            </tr>
-          </thead>
-          <tbody data-bind="sessionsBody"></tbody>
-        </table>
-        <div class="tbl-foot" data-bind="sessionsFoot"></div>
+      <div data-bind="sessionsLoading">
+        <div class="loading">
+          <div class="loading-spinner"></div>
+          <div class="loading-text">Loading sessions...</div>
+        </div>
       </div>
+      <div data-bind="sessionsContent" style="display:none">
+        <div class="tbl-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Session</th>
+                <th>Status</th>
+                <th>Meet Link</th>
+                <th>Q&A</th>
+                <th>Duration</th>
+                <th style="text-align:right">Action</th>
+              </tr>
+            </thead>
+            <tbody data-bind="sessionsBody"></tbody>
+          </table>
+          <div class="tbl-foot" data-bind="sessionsFoot"></div>
+        </div>
+      </div>
+      <div data-bind="sessionsEmpty" style="display:none">
+        <div class="empty">
+          <div class="empty-icon">📋</div>
+          <div class="empty-title">No sessions yet</div>
+          <div class="empty-desc">Click "+ New Session" to create your first session</div>
+        </div>
+      </div>
+      <div data-bind="sessionsError" style="display:none"></div>
     </div>
 
     <!-- Q&A Tab -->
@@ -111,5 +137,8 @@
         </div>
       </div>
     </div>
+
+    <!-- Error State -->
+    <div data-bind="pageError" style="display:none"></div>
   </div>
 </template>

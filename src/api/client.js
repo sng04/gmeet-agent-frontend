@@ -1,5 +1,8 @@
 const BASE_URL = 'https://sjsd378hbd.execute-api.ap-southeast-1.amazonaws.com/dev';
 
+// Set to true to use mock data (for testing without backend)
+const USE_MOCK = false;
+
 class ApiClient {
   constructor() {
     this.token = localStorage.getItem('access_token');
@@ -38,11 +41,7 @@ class ApiClient {
         localStorage.removeItem('access_token');
         localStorage.removeItem('id_token');
         localStorage.removeItem('refresh_token');
-        const isAdmin = localStorage.getItem('user_role') === 'admin';
-        localStorage.removeItem('user_role');
-        localStorage.removeItem('user_info');
-        window.history.pushState({}, '', isAdmin ? '/admin/login' : '/login');
-        window.dispatchEvent(new PopStateEvent('popstate'));
+        window.location.hash = '#/login';
         throw new Error(data?.message || 'Unauthorized');
       }
 

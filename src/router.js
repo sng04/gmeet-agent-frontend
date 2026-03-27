@@ -18,6 +18,7 @@ const adminRoutes = {
   'agents': () => import('./controllers/admin/AgentsController.js'),
   'agent-create': () => import('./controllers/admin/AgentCreateController.js'),
   'agent-detail': () => import('./controllers/admin/AgentDetailController.js'),
+  'agent-edit': () => import('./controllers/admin/AgentEditController.js'),
   'agents/:id': () => import('./controllers/admin/AgentDetailController.js'),
   'personalities': () => import('./controllers/admin/PersonalitiesController.js'),
   'skills': () => import('./controllers/admin/SkillsController.js'),
@@ -25,10 +26,14 @@ const adminRoutes = {
   'gmail': () => import('./controllers/admin/GmailCredentialsController.js'),
   'gmail-create': () => import('./controllers/admin/GmailCreateController.js'),
   'gmail-edit': () => import('./controllers/admin/GmailEditController.js'),
+  'sessions': () => import('./controllers/admin/SessionsController.js'),
   'qa': () => import('./controllers/admin/QAMonitorController.js'),
   'tokens': () => import('./controllers/admin/TokenUsageController.js'),
   'logs': () => import('./controllers/admin/AuditLogsController.js'),
   'users': () => import('./controllers/admin/UsersController.js'),
+  // Session routes (reuse user controllers)
+  'live': () => import('./controllers/user/LiveSessionController.js'),
+  'session/:id': () => import('./controllers/user/RetroSessionController.js'),
 };
 
 const userRoutes = {
@@ -56,14 +61,27 @@ function parsePath() {
 }
 
 function matchRoute(path, routes) {
+  // Remove query string for route matching
+  const pathWithoutQuery = path.split('?')[0];
+  
+  // First try exact match (routes without params)
   for (const [pattern, loader] of Object.entries(routes)) {
+    if (!pattern.includes(':') && pattern === pathWithoutQuery) {
+      return { loader, params: {} };
+    }
+  }
+  
+  // Then try pattern match (routes with params)
+  for (const [pattern, loader] of Object.entries(routes)) {
+    if (!pattern.includes(':')) continue;
+    
     const paramNames = [];
     const regexPattern = pattern.replace(/:([^/]+)/g, (_, name) => {
       paramNames.push(name);
       return '([^/]+)';
     });
-    const regex = new RegExp(`^${regexPattern}$`);
-    const match = path.match(regex);
+    const regex = new RegExp('^' + regexPattern + '$');
+    const match = pathWithoutQuery.match(regex);
     if (match) {
       const params = {};
       paramNames.forEach((name, i) => { params[name] = match[i + 1]; });
@@ -76,9 +94,10 @@ function matchRoute(path, routes) {
 export async function render() {
   const path = parsePath();
   
-  // Skip if same path
-  if (path === currentPath && currentPath !== null) return;
-  currentPath = path;
+  // Skip if same path (compare without query string for caching)
+  const pathWithoutQuery = path.split('?')[0];
+  if (pathWithoutQuery === currentPath && currentPath !== null) return;
+  currentPath = pathWithoutQuery;
 
   const state = authStore.getState();
   const { isAuthenticated, isAdmin, challenge } = state;

@@ -1,59 +1,58 @@
 <template id="project-edit">
   <div class="page">
     <div class="bc">
-      <a href="#" class="nav-back" data-to="projects">Projects</a>
+      <a href="#" data-action="navBack" data-to="projects">Projects</a>
       <span class="sep">›</span>
-      <a href="#" class="nav-back" data-to="project-detail">Acme Corp Sales</a>
+      <a href="#" data-action="navBack" data-to="project-detail" data-bind="projectLink">Project</a>
       <span class="sep">›</span>
       <span class="cur">Edit</span>
     </div>
     <div class="pg-hdr">
       <div>
         <h1>Edit Project</h1>
-        <div class="pg-sub">Acme Corp Sales</div>
+        <div class="pg-sub">Update project settings and configuration</div>
       </div>
     </div>
-    <div class="card" style="max-width:680px">
+    <div data-bind="alertContainer"></div>
+    
+    <!-- Loading State -->
+    <div data-bind="pageLoading">
+      <div class="loading">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Loading project...</div>
+      </div>
+    </div>
+
+    <!-- Content (hidden by default) -->
+    <div class="card" style="max-width:680px;display:none" data-bind="pageContent">
       <div class="card-body">
         <div class="form-g">
           <label class="form-l">Project Name <span class="req">*</span></label>
-          <input class="form-i" value="Acme Corp Sales">
+          <input class="form-i" name="name" placeholder="e.g. Acme Corp Sales">
         </div>
         <div class="form-g">
           <label class="form-l">Description</label>
-          <textarea class="form-ta">Enterprise sales meetings with Acme Corp technical team</textarea>
+          <textarea class="form-ta" name="description" rows="3" placeholder="Brief description of the project scope and purpose..."></textarea>
         </div>
         <div class="form-g">
           <label class="form-l">Default Agent</label>
-          <select class="form-sel">
-            <option selected>TechSales Bot</option>
-            <option>Demo Agent</option>
-            <option>Support Agent</option>
+          <select class="form-sel" name="agent_id" data-bind="agentSelect">
+            <option value="">Select agent...</option>
           </select>
+          <div class="form-h">The agent that will be used by default for sessions in this project.</div>
         </div>
         <div class="form-g">
-          <label class="form-l">Gmail Credential</label>
-          <select class="form-sel">
-            <option selected>techsales-bot@agents.company.com</option>
-            <option>demo-bot@agents.company.com</option>
-            <option>support-bot@agents.company.com</option>
+          <label class="form-l">Gmail Credential <span class="req">*</span></label>
+          <select class="form-sel" name="bot_credential_id" data-bind="gmailSelect">
+            <option value="">Select credential...</option>
           </select>
           <div class="form-h">The Gmail account this project uses to join Google Meet sessions.</div>
         </div>
-        <div class="form-g">
-          <label class="form-l">KB Prefix / Tag</label>
-          <input class="form-i" value="acme-corp">
-          <div class="form-h">Changing this will require re-indexing all documents.</div>
-        </div>
-        <div class="divider"></div>
-        <div class="flex gap-3 jc-b mt-6">
-          <button class="btn btn-d" data-action="archive">Archive Project</button>
-          <div class="flex gap-3">
-            <button class="btn btn-s btn-lg" data-action="cancel">Cancel</button>
-            <button class="btn btn-p btn-lg" data-action="save">Save Changes</button>
-          </div>
-        </div>
+        <div class="flex gap-3 mt-6 jc-end" data-bind="formActions"></div>
       </div>
     </div>
+
+    <!-- Error State -->
+    <div data-bind="pageError" style="display:none"></div>
   </div>
 </template>

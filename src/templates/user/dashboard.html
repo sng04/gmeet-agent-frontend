@@ -2,13 +2,13 @@
   <div class="page">
     <div class="pg-hdr">
       <div>
-        <h1>My Projects</h1>
-        <div class="pg-sub">Select a project to view sessions and details</div>
+        <h1>Dashboard</h1>
+        <div class="pg-sub">Overview of your projects and sessions</div>
       </div>
     </div>
 
     <!-- Live Widget (inlined) -->
-    <div class="live-widget mb-6" data-bind="liveWidget">
+    <div class="live-widget mb-6" data-bind="liveWidget" style="display:none">
       <div class="flex items-c jc-b">
         <div>
           <div class="live-badge-anim mb-4"><span class="live-dot-anim"></span>LIVE</div>
@@ -26,10 +26,28 @@
       </div>
     </div>
 
-    <!-- Project Cards Grid -->
-    <div class="g g2 mb-6" data-bind="projectsGrid"></div>
+    <!-- Loading State -->
+    <div data-bind="pageLoading">
+      <div class="loading">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Loading projects...</div>
+      </div>
+    </div>
 
-    <!-- Sessions Table -->
-    <div data-bind="sessionsTable"></div>
+    <!-- Content (hidden by default) -->
+    <div data-bind="pageContent" style="display:none">
+      <!-- Stats Cards -->
+      <div class="g g4 mb-6" data-bind="statsGrid"></div>
+
+      <!-- Project Cards Grid -->
+      <h3 class="mb-4" style="font-size:15px;font-weight:600">My Projects</h3>
+      <div class="g g2 mb-6" data-bind="projectsGrid"></div>
+
+      <!-- Sessions Table -->
+      <div data-bind="sessionsTable"></div>
+    </div>
+
+    <!-- Error State -->
+    <div data-bind="pageError" style="display:none"></div>
   </div>
 </template>

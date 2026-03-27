@@ -1,32 +1,40 @@
 <template id="retro-session">
   <div class="page">
-    <div class="bc">
-      <a href="#" data-action="backProject">Acme Corp Sales</a>
-      <span class="sep">›</span>
-      <a href="#" data-action="backSessions">Sessions</a>
-      <span class="sep">›</span>
-      <span class="cur">Retrospective</span>
-    </div>
-    <div class="pg-hdr">
-      <div>
-        <h1 data-bind="purpose"></h1>
-        <div class="pg-sub">Project: <span data-bind="project"></span> · Completed <span data-bind="date"></span></div>
-      </div>
-      <div class="pg-actions">
-        <span class="badge b-summary"><span class="dot"></span> Finished</span>
+    <!-- Loading State -->
+    <div data-bind="pageLoading">
+      <div class="loading">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Loading session...</div>
       </div>
     </div>
-    <div class="sess-meta mb-5">
-      <div class="sess-meta-item"><span>🤖</span><strong>Agent:</strong> <span data-bind="metaAgent"></span></div><div class="sess-meta-div"></div>
-      <div class="sess-meta-item"><span>📁</span><strong>Project:</strong> <span data-bind="metaProject"></span></div><div class="sess-meta-div"></div>
-      <div class="sess-meta-item"><span>⏱️</span><strong>Duration:</strong> <span data-bind="metaDuration"></span></div><div class="sess-meta-div"></div>
-      <div class="sess-meta-item"><span>💬</span><strong>Q&A:</strong> <span data-bind="metaQA"></span> pairs</div><div class="sess-meta-div"></div>
-      <div class="sess-meta-item"><span>👥</span><strong>Participants:</strong> <span data-bind="metaParticipants"></span></div><div class="sess-meta-div"></div>
-      <div class="sess-meta-item"><span>📅</span><strong>Started:</strong> <span data-bind="metaStarted"></span></div><div class="sess-meta-div"></div>
-      <div class="sess-meta-item"><span>🏁</span><strong>Ended:</strong> <span data-bind="metaEnded"></span></div><div class="sess-meta-div"></div>
-      <div class="sess-meta-item"><span>📊</span><strong>Score:</strong> <span data-bind="metaScore"></span></div>
-    </div>
-    <div class="retro-layout">
+
+    <!-- Content -->
+    <div data-bind="pageContent" style="display:none">
+      <div class="bc">
+        <a href="#" data-action="backNav" data-bind="backLink">Project</a>
+        <span class="sep">›</span>
+        <span class="cur">Session Review</span>
+      </div>
+      <div class="pg-hdr">
+        <div>
+          <h1 data-bind="sessionName">Session</h1>
+          <div class="pg-sub">Project: <span data-bind="projectName"></span></div>
+        </div>
+        <div class="pg-actions" data-bind="statusBadge">
+          <span class="badge b-summary"><span class="dot"></span> Finished</span>
+        </div>
+      </div>
+      <div class="sess-meta mb-5">
+        <div class="sess-meta-item"><span>📁</span><strong>Project:</strong> <span data-bind="metaProject"></span></div><div class="sess-meta-div"></div>
+        <div class="sess-meta-item"><span>🔗</span><strong>Meet:</strong> <a href="#" data-bind="metaMeetLink" data-external target="_blank" class="text-pri"></a></div><div class="sess-meta-div"></div>
+        <div class="sess-meta-item"><span>⏱️</span><strong>Duration:</strong> <span data-bind="metaDuration"></span></div><div class="sess-meta-div"></div>
+        <div class="sess-meta-item"><span>💬</span><strong>Q&A Pairs:</strong> <span data-bind="metaQA"></span></div><div class="sess-meta-div"></div>
+        <div class="sess-meta-item"><span>📅</span><strong>Started:</strong> <span data-bind="metaStarted"></span></div><div class="sess-meta-div"></div>
+        <div class="sess-meta-item"><span>🏁</span><strong>Ended:</strong> <span data-bind="metaEnded"></span></div><div class="sess-meta-div"></div>
+        <div class="sess-meta-item"><span>📊</span><strong>Score:</strong> <span data-bind="metaScore"></span></div><div class="sess-meta-div"></div>
+        <div class="sess-meta-item" id="sess-status-badge" data-bind="statusBadgeInline"></div>
+      </div>
+      <div class="retro-layout">
       <div>
         <div class="tabs">
           <div class="tab active" data-tab="summary">📋 Summary</div>
@@ -128,6 +136,10 @@
           <button data-action="chatSend">➤</button>
         </div>
       </div>
+      </div>
     </div>
+
+    <!-- Error State -->
+    <div data-bind="pageError" style="display:none"></div>
   </div>
 </template>

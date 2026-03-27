@@ -25,20 +25,12 @@ export async function loadTemplate(filePath, templateId) {
       throw new Error(`Failed to load template: ${filePath} (HTTP ${response.status})`);
     }
     const text = await response.text();
-
-    // If SPA fallback returned index.html instead of the template file, detect it
-    if (text.includes('<!DOCTYPE html>') && text.includes('<div id="app">')) {
-      throw new Error(`Template file not found on server: ${filePath} (got index.html fallback)`);
-    }
-
     const doc = new DOMParser().parseFromString(text, 'text/html');
     cache.set(filePath, doc);
   }
 
   const doc = cache.get(filePath);
-  // querySelector on the full document — DOMParser places <template> in <head>
-  const template = doc.querySelector(`template[id="${templateId}"]`);
-
+  const template = doc.querySelector('template#' + templateId);
   if (!template) {
     throw new Error(`Template not found: #${templateId} in ${filePath}`);
   }

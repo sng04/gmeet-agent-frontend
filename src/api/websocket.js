@@ -1,4 +1,4 @@
-const WS_URL = 'wss://hey8o0q9tb.execute-api.ap-southeast-1.amazonaws.com/production';
+import { WS_URL } from '../config.js';
 
 /**
  * WebSocket client for live meeting sessions.
