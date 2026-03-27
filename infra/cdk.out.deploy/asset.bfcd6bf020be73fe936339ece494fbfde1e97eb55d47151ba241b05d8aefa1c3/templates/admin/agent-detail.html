@@ -1,0 +1,61 @@
+<template id="agent-detail">
+  <div class="page">
+    <div class="bc">
+      <a href="#" data-action="navBack" data-to="agents">Agents</a>
+      <span class="sep">›</span>
+      <span class="cur" data-bind="agentName"></span>
+    </div>
+    <div data-bind="loading" style="display:none">
+      <div class="loading"><div class="loading-spinner"></div><div class="loading-text">Loading agent...</div></div>
+    </div>
+    <div data-bind="error" style="display:none"></div>
+    <div data-bind="content" style="display:none">
+      <div class="agent-detail-hdr mb-6">
+        <div class="agent-avatar">🤖</div>
+        <div style="flex:1">
+          <div class="flex items-c gap-3 mb-1">
+            <h2 style="font-size:22px;font-weight:800" data-bind="agentTitle"></h2>
+          </div>
+          <div class="text-xs text-t" data-bind="agentMeta"></div>
+        </div>
+        <div class="flex gap-2" data-bind="actions"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start">
+        <div>
+          <div class="card mb-6">
+            <div class="card-hdr"><div class="text-md fw-sb">Role Prompt</div></div>
+            <div class="card-body" style="background:var(--gray-25)">
+              <p style="font-size:13px;line-height:1.7;color:var(--gray-700);white-space:pre-wrap;font-family:var(--mono)" data-bind="roleText"></p>
+            </div>
+          </div>
+          <div class="card mb-6">
+            <div class="card-hdr"><div class="text-md fw-sb">Behavior Guidelines</div></div>
+            <div class="card-body" style="background:var(--gray-25)">
+              <p style="font-size:13px;line-height:1.7;color:var(--gray-700);white-space:pre-wrap;font-family:var(--mono)" data-bind="guidelinesText"></p>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="card mb-6">
+            <div class="card-hdr"><div class="text-md fw-sb">Configuration</div></div>
+            <div class="card-body">
+              <div class="flex jc-b items-c" style="padding:6px 0">
+                <span class="text-xs text-t">Personality</span>
+                <span class="text-sm fw-m" data-bind="configPersonality"></span>
+              </div>
+            </div>
+          </div>
+          <div class="card mb-6">
+            <div class="card-hdr">
+              <div class="text-md fw-sb">Skills</div>
+              <button class="btn btn-g btn-sm" data-action="addSkill">+ Add Skill</button>
+            </div>
+            <div data-bind="skillsList">
+              <div class="card-body text-xs text-t">No skills attached.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>

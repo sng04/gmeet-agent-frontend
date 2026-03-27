@@ -556,3 +556,48 @@
 .btn-ok:hover {
   background: var(--ok-600);
 }
+
+/* Agent Detail Chat Bubbles */
+.chat-test-row {
+  display: flex;
+  margin-bottom: 10px;
+}
+.chat-test-row.right {
+  justify-content: flex-end;
+}
+.chat-test-bubble {
+  max-width: 85%;
+  font-size: 13px;
+  line-height: 1.5;
+  padding: 10px 14px;
+  border-radius: 12px;
+}
+.chat-test-bubble.user-bubble {
+  background: var(--pri-500);
+  color: #fff;
+  border-radius: 12px 12px 2px 12px;
+}
+.chat-test-bubble.ai-bubble {
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  color: var(--gray-800);
+  border-radius: 12px 12px 12px 2px;
+}
+.chat-test-bubble .agent-lbl {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--gray-500);
+  text-transform: uppercase;
+  margin-bottom: 4px;
+  font-family: var(--mono);
+}
+.chat-test-bubble .chat-test-body {
+  font-size: 13px;
+  line-height: 1.6;
+}
+.chat-test-bubble .chat-test-body p {
+  margin: 0 0 8px 0;
+}
+.chat-test-bubble .chat-test-body p:last-child {
+  margin-bottom: 0;
+}

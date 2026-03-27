@@ -222,3 +222,14 @@ CSS is in `src/styles/` with variables defined in `variables.css`. Key class con
 Static HTML mockups of the full UI are in `example/`:
 - `example/admin-portal-revised.html` — all admin pages
 - `example/user-portal-revised.html` — all user pages
+
+
+## Post-Integration Cleanup
+
+The `DEVELOPER 2/` folder was used as read-only reference material during the codebase integration. All features from both codebases have been merged into the main `src/` directory. No code in `src/` depends on anything in `DEVELOPER 2/`.
+
+Once you've verified the integration is working correctly, you can safely remove it:
+
+```bash
+rm -rf "DEVELOPER 2/"
+```

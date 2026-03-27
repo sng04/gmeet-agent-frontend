@@ -14,6 +14,7 @@ const adminMenu = [
     { id: 'users', icon: '👥', label: 'Users' },
     { id: 'projects', icon: '📁', label: 'Projects', badge: '3' },
     { id: 'agents', icon: '🤖', label: 'Agents', badge: '3' },
+    { id: 'personalities', icon: '🎭', label: 'Personalities' },
     { id: 'skills', icon: '⚡', label: 'Skills' },
     { id: 'gmail', icon: '📧', label: 'Gmail Credentials' },
   ]},

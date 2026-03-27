@@ -1,0 +1,115 @@
+<template id="project-detail">
+  <div class="page">
+    <div class="bc">
+      <a href="#" data-action="backNav">My Projects</a>
+      <span class="sep">›</span>
+      <span class="cur" data-bind="projectName"></span>
+    </div>
+    <div class="pg-hdr">
+      <div>
+        <h1 data-bind="title"></h1>
+        <div class="pg-sub" data-bind="description"></div>
+      </div>
+      <div class="pg-actions" data-bind="actions"></div>
+    </div>
+
+    <!-- Live Session Banner -->
+    <div class="card mb-6" style="border-color:var(--err-500);background:var(--err-50)">
+      <div class="card-body" style="padding:14px 20px">
+        <div class="flex items-c gap-3">
+          <span class="badge b-live" style="font-size:12px;padding:4px 10px"><span class="dot"></span> Live Session</span>
+          <div>
+            <div class="text-sm fw-sb text-p">Integration Planning</div>
+            <div class="text-xs text-t">Started by you · 12 min ago · 3 Q&A pairs</div>
+          </div>
+          <button class="btn btn-live btn-sm" style="margin-left:auto" data-action="openLive">Open Live View →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="g g3 mb-6">
+      <div class="stat" style="cursor:default">
+        <div class="stat-label">Default Agent</div>
+        <div class="stat-val" style="font-size:15px;margin-top:4px" data-bind="statAgent"></div>
+      </div>
+      <div class="stat" style="cursor:default">
+        <div class="stat-label">Total Sessions</div>
+        <div class="stat-val" data-bind="statSessions"></div>
+      </div>
+      <div class="stat" style="cursor:default">
+        <div class="stat-label">Total Q&A Pairs</div>
+        <div class="stat-val" data-bind="statQA"></div>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <div class="tab active" data-tab="sessions">📋 Sessions</div>
+      <div class="tab" data-tab="qna">💬 Q&A Pairs</div>
+      <div class="tab" data-tab="kb">📚 Knowledge Base</div>
+    </div>
+
+    <!-- Sessions Tab -->
+    <div class="tab-c active" id="tab-sessions">
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Purpose</th>
+              <th>Status</th>
+              <th>Agent</th>
+              <th>Q&A</th>
+              <th>Duration</th>
+              <th style="text-align:right">Action</th>
+            </tr>
+          </thead>
+          <tbody data-bind="sessionsBody"></tbody>
+        </table>
+        <div class="tbl-foot" data-bind="sessionsFoot"></div>
+      </div>
+    </div>
+
+    <!-- Q&A Tab -->
+    <div class="tab-c" id="tab-qna">
+      <div class="g g3 mb-5" style="max-width:500px">
+        <div class="stat" style="cursor:default"><div class="stat-label">Total Q&A Pairs</div><div class="stat-val" data-bind="qaTotalVal"></div></div>
+        <div class="stat" style="cursor:default"><div class="stat-label">Avg Confidence</div><div class="stat-val">88%</div></div>
+        <div class="stat" style="cursor:default"><div class="stat-label">Sessions with Q&A</div><div class="stat-val">3</div></div>
+      </div>
+      <div data-bind="qaCards"></div>
+    </div>
+
+    <!-- KB Tab -->
+    <div class="tab-c" id="tab-kb">
+      <div class="kb-folder">
+        <div class="kb-folder-hdr">
+          <div class="flex items-c gap-3">
+            <span style="font-size:18px">📚</span>
+            <div>
+              <div class="text-sm fw-sb" data-bind="kbFolderName"></div>
+              <div class="text-xs text-t" data-bind="kbFolderMeta"></div>
+            </div>
+            <span class="kb-folder-tag" data-bind="kbFolderTag"></span>
+          </div>
+        </div>
+        <table style="width:100%;border-collapse:collapse">
+          <thead>
+            <tr>
+              <th style="text-align:left;font-size:11px;font-weight:500;color:var(--gray-500);text-transform:uppercase;letter-spacing:.05em;padding:10px 20px;border-bottom:1px solid var(--gray-100);background:var(--gray-25)">Document</th>
+              <th style="text-align:left;font-size:11px;font-weight:500;color:var(--gray-500);text-transform:uppercase;padding:10px 20px;border-bottom:1px solid var(--gray-100);background:var(--gray-25)">Size</th>
+              <th style="text-align:left;font-size:11px;font-weight:500;color:var(--gray-500);text-transform:uppercase;padding:10px 20px;border-bottom:1px solid var(--gray-100);background:var(--gray-25)">Status</th>
+              <th style="text-align:left;font-size:11px;font-weight:500;color:var(--gray-500);text-transform:uppercase;padding:10px 20px;border-bottom:1px solid var(--gray-100);background:var(--gray-25)">Uploaded</th>
+            </tr>
+          </thead>
+          <tbody data-bind="kbDocsBody"></tbody>
+        </table>
+      </div>
+      <div class="card" style="background:var(--gray-25);border-color:var(--gray-100)">
+        <div class="card-body" style="padding:14px 20px">
+          <div class="text-xs text-t">📌 These are the reference documents your agent uses to answer questions during sessions. Contact your admin to add or update documents.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>

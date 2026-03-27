@@ -1,0 +1,39 @@
+<template id="layout">
+  <div id="app">
+    <header class="topbar">
+      <button class="sidebar-toggle" data-action="sidebarToggle" data-bind="sidebarToggle">☰</button>
+      <div class="logo">
+        <div class="logo-icon" data-bind="logoClass">M</div>
+        Meet<span class="acc">Agent</span>
+      </div>
+      <span class="portal-badge" data-bind="portalBadge">Admin Portal</span>
+      <div class="topbar-right">
+        <div class="avatar" data-action="avatarToggle" data-bind="avatarClass">
+          <span data-bind="topbarInitials">U</span>
+          <div class="avatar-menu">
+            <div class="avatar-menu-hdr">
+              <div class="avatar-menu-name" data-bind="topbarUserName">User</div>
+              <div class="avatar-menu-email" data-bind="topbarUserEmail"></div>
+            </div>
+            <div class="avatar-menu-item" data-action="logout">🚪 Sign Out</div>
+          </div>
+        </div>
+      </div>
+    </header>
+    <div class="layout">
+      <nav class="sidebar" id="sidebar">
+        <div data-bind="navContainer"></div>
+        <div class="sidebar-footer">
+          <div class="user-card">
+            <div class="avatar" style="cursor:default"><span data-bind="sidebarInitials">U</span></div>
+            <div>
+              <div class="name" data-bind="sidebarUserName">User</div>
+              <div class="role" data-bind="sidebarUserRole">User</div>
+            </div>
+          </div>
+        </div>
+      </nav>
+      <main class="main" id="main-content"></main>
+    </div>
+  </div>
+</template>
