@@ -190,14 +190,13 @@ export default async function GmailCredentialsController(params) {
   }
 
   function getStatusText(cred) {
-    // Status is auto-determined by verification
-    if (cred.verification_status === 'verified') {
-      return '<span style="color:var(--ok-600)">Active</span>';
-    } else if (cred.verification_status === 'validating') {
+    if (cred.verification_status === 'validating') {
       return '<span style="color:var(--info-600)">Pending</span>';
-    } else {
-      return '<span style="color:var(--gray-500)">Inactive</span>';
     }
+    if (cred.available_status === 'active') {
+      return '<span style="color:var(--ok-600)">Active</span>';
+    }
+    return '<span style="color:var(--gray-500)">Inactive</span>';
   }
 
   function getPoolStatusText(cred) {
@@ -235,7 +234,6 @@ export default async function GmailCredentialsController(params) {
             <th>Verification</th>
             <th>Status</th>
             <th>Pool Size</th>
-            <th>Pool Status</th>
             <th></th>
           </tr>
         </thead>
@@ -267,7 +265,6 @@ export default async function GmailCredentialsController(params) {
         <td>${getVerificationBadge(cred.verification_status)}</td>
         <td>${getStatusText(cred)}</td>
         <td>${cred.warm_pool_size || 0}</td>
-        <td>${getPoolStatusText(cred)}</td>
         <td>
           <div class="flex gap-2 jc-end">
             <button class="btn btn-s btn-sm" data-action="edit" data-id="${cred.credential_id}">${isFailed ? 'Retry' : 'Edit'}</button>
@@ -283,7 +280,7 @@ export default async function GmailCredentialsController(params) {
         expandRow.className = 'expand-row';
         expandRow.style.display = 'none';
         expandRow.innerHTML = `
-          <td colspan="7" style="padding:0;background:var(--gray-50)">
+          <td colspan="6" style="padding:0;background:var(--gray-50)">
             <div class="pool-content" style="padding:16px 20px"></div>
           </td>
         `;

@@ -68,16 +68,19 @@ Example: `https://abc123.execute-api.ap-southeast-1.amazonaws.com/dev`
 
 ### Important Flow Rules
 
-| Verification Status | Available Status | Warm Pool | Edit Modal Fields |
+| Verification Status | Available Status | Warm Pool | Edit Form Fields |
 |---------------------|------------------|-----------|-------------------|
 | `validating` | `inactive` | ❌ Don't start | N/A (wait for result) |
-| `verified` | `active` | ✅ Auto-start | Only `warm_pool_size` |
-| `verification_failed` | `inactive` | ❌ Don't start | `email`, `password` (retry) |
+| `verified` | `active` | ✅ Auto-start | Toggle (active/inactive) + `warm_pool_size` |
+| `verified` | `inactive` | ❌ Stopped (size kept) | Toggle (active/inactive) + `warm_pool_size` |
+| `verification_failed` | `inactive` | ❌ Don't start | `email`, `password`, `warm_pool_size` (retry) |
 
 **Key Points:**
-- `available_status` is **automatically** set by backend based on verification result
-- **No toggle** for active/inactive - status is determined by verification
-- Warm pool only starts for **verified + active** credentials
+- `available_status` is **automatically** set to `active` by backend after successful verification
+- After verification, admin can **toggle active/inactive** via edit form
+- **Inactive**: all warm pool containers are stopped, but `warm_pool_size` is preserved
+- **Active**: warm pool starts according to `warm_pool_size`
+- Warm pool only runs for **verified + active** credentials
 - Edit behavior differs based on verification status
 
 ### Status Fields
