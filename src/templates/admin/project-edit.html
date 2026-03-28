@@ -48,7 +48,11 @@
           </select>
           <div class="form-h">The Gmail account this project uses to join Google Meet sessions.</div>
         </div>
-        <div class="flex gap-3 mt-6 jc-end" data-bind="formActions"></div>
+        <div data-bind="deleteAlert" class="mt-6"></div>
+        <div class="flex mt-6" style="justify-content:space-between;align-items:center">
+          <div data-bind="deleteActions"></div>
+          <div class="flex gap-3" data-bind="formActions"></div>
+        </div>
       </div>
     </div>
 
