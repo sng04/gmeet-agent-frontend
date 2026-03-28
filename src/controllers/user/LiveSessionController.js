@@ -5,7 +5,7 @@ import { projectsApi } from '../../api/projects.js';
 import { formatDate } from '../../utils/format.js';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog.js';
 
-const WEBSOCKET_URL = 'wss://nim2yxc596.execute-api.ap-southeast-1.amazonaws.com/production';
+const WEBSOCKET_URL = 'wss://zuubz5th9h.execute-api.ap-southeast-1.amazonaws.com/production';
 
 const SPEAKER_COLORS = [
   '#3B82F6', '#10B981', '#F59E0B', '#EF4444',
@@ -100,6 +100,7 @@ export default async function LiveSessionController() {
   let project = null;
   let durationInterval = null;
   let statusPollInterval = null;
+  let transcriptPollInterval = null;
 
   // Transcript state
   let transcriptLines = [];   // Final lines
@@ -230,12 +231,22 @@ export default async function LiveSessionController() {
     };
 
     ws.onmessage = (event) => {
+      console.log('[Transcript] WS raw message:', event.data);
       let data;
-      try { data = JSON.parse(event.data); } catch { return; }
-      console.log('[Transcript] WS message:', data.type, data);
+      try { data = JSON.parse(event.data); } catch {
+        console.warn('[Transcript] WS non-JSON message:', event.data);
+        return;
+      }
+      console.log('[Transcript] WS parsed:', data);
 
       if (data.type === 'transcriptLine' && data.line) {
         handleTranscriptLine(data.line);
+      } else if (data.line) {
+        // Backend might send without type wrapper
+        handleTranscriptLine(data.line);
+      } else if (data.transcript_id) {
+        // Backend might send the line directly without nesting
+        handleTranscriptLine(data);
       }
     };
 
@@ -352,12 +363,44 @@ export default async function LiveSessionController() {
       // Connect WebSocket if session is live
       if (uiStatus === 'live' || uiStatus === 'starting') {
         connectWebSocket(sid);
+        startTranscriptPolling(sid);
       } else if (uiStatus !== 'finished' && uiStatus !== 'failed' && uiStatus !== 'none') {
         // Not yet live — poll bot status until it becomes live
         startStatusPolling(sid);
       }
     } catch (err) {
       console.error('Failed to init transcripts:', err);
+    }
+  }
+
+  // ─── Transcript polling fallback (REST API) ───
+
+  function startTranscriptPolling(sid) {
+    if (transcriptPollInterval) return;
+    transcriptPollInterval = setInterval(async () => {
+      try {
+        const historical = await fetchAllTranscripts(sid);
+        if (historical.length > transcriptLines.length) {
+          const existingIds = new Set(transcriptLines.map(l => l.transcript_id));
+          const newLines = historical.filter(l => !existingIds.has(l.transcript_id));
+          if (newLines.length > 0) {
+            transcriptLines = [...transcriptLines, ...newLines].sort(
+              (a, b) => new Date(a.timestamp) - new Date(b.timestamp)
+            );
+            renderAllTranscripts();
+            renderRetroTranscript();
+          }
+        }
+      } catch (err) {
+        console.warn('Transcript poll failed:', err);
+      }
+    }, 3000);
+  }
+
+  function stopTranscriptPolling() {
+    if (transcriptPollInterval) {
+      clearInterval(transcriptPollInterval);
+      transcriptPollInterval = null;
     }
   }
 
@@ -382,6 +425,7 @@ export default async function LiveSessionController() {
           // Bot is now live — stop polling, connect WebSocket
           stopStatusPolling();
           connectWebSocket(sid);
+          startTranscriptPolling(sid);
 
           // Show live controls
           const connStatus = el.querySelector('#conn-status');
@@ -631,6 +675,7 @@ export default async function LiveSessionController() {
   el._cleanup = () => {
     if (durationInterval) clearInterval(durationInterval);
     stopStatusPolling();
+    stopTranscriptPolling();
     disconnectWebSocket();
   };
 

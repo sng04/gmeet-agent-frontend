@@ -56,6 +56,11 @@ export default async function DashboardController(params) {
   let sessions = [];
   let users = [];
   let projectMap = {};
+  let sessionPollInterval = null;
+
+  el._cleanup = () => {
+    if (sessionPollInterval) { clearInterval(sessionPollInterval); sessionPollInterval = null; }
+  };
 
   async function loadData() {
     try {
@@ -68,6 +73,7 @@ export default async function DashboardController(params) {
 
       projects = projectsRes.data?.items || [];
       sessions = sessionsRes.data?.items || [];
+      sessions.sort((a, b) => new Date(b.created_at || b.start_time || 0) - new Date(a.created_at || a.start_time || 0));
       users = usersRes.data?.items || usersRes.data?.users || [];
       if (!Array.isArray(users)) users = [];
 
@@ -90,6 +96,25 @@ export default async function DashboardController(params) {
       renderStats(activeSessions, totalSessions, totalProjects, totalUsers);
       renderSessionsTable();
       renderQATable();
+
+      // Poll sessions for status changes
+      sessionPollInterval = setInterval(async () => {
+        try {
+          const res = await sessionsApi.list({ limit: 50 });
+          const updated = res.data?.items || [];
+          updated.sort((a, b) => new Date(b.created_at || b.start_time || 0) - new Date(a.created_at || a.start_time || 0));
+          const changed = updated.some((u, i) => {
+            const old = sessions[i];
+            return !old || u.bot_status !== old.bot_status;
+          }) || updated.length !== sessions.length;
+          if (changed) {
+            sessions = updated;
+            renderSessionsTable();
+            const active = sessions.filter(s => getUIStatus(s.bot_status) === 'live').length;
+            renderStats(active, sessions.length, projects.length, users.length);
+          }
+        } catch (err) { /* ignore */ }
+      }, 5000);
     } catch (err) {
       console.error('Failed to load dashboard data:', err);
       pageLoading.style.display = 'none';

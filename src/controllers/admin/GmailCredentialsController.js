@@ -24,16 +24,43 @@ export default async function GmailCredentialsController(params) {
   );
 
   let credentials = [];
-  let pollingIntervals = new Map(); 
+  let pollingIntervals = new Map();
+  let refreshInterval = null;
 
   // Cleanup polling on page leave
   function cleanup() {
     pollingIntervals.forEach(intervalId => clearInterval(intervalId));
     pollingIntervals.clear();
+    if (refreshInterval) { clearInterval(refreshInterval); refreshInterval = null; }
   }
 
   // Store cleanup function for router to call
   el._cleanup = cleanup;
+
+  // Auto-refresh credentials list every 5s to pick up status changes
+  function startAutoRefresh() {
+    if (refreshInterval) return;
+    refreshInterval = setInterval(async () => {
+      try {
+        const response = await botCredentialApi.list();
+        const updated = response.data?.items || [];
+        // Only re-render if something changed
+        const changed = updated.some((u, i) => {
+          const old = credentials[i];
+          if (!old) return true;
+          return u.verification_status !== old.verification_status
+            || u.available_status !== old.available_status
+            || JSON.stringify(u.warm_pool_status) !== JSON.stringify(old.warm_pool_status);
+        }) || updated.length !== credentials.length;
+        if (changed) {
+          credentials = updated;
+          renderCredentials();
+        }
+      } catch (err) {
+        // Silently ignore refresh errors
+      }
+    }, 5000);
+  }
 
   async function loadCredentials() {
     const tableContainer = el.querySelector('[data-bind="credentialsList"]');
@@ -43,6 +70,7 @@ export default async function GmailCredentialsController(params) {
       credentials = response.data?.items || [];
       renderCredentials();
       startPollingForValidating();
+      startAutoRefresh();
     } catch (err) {
       console.error('Failed to load credentials:', err);
       tableContainer.innerHTML = `

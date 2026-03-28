@@ -84,6 +84,31 @@ export default async function ProjectDetailController(params) {
   let assignedUsers = [];
   let allUsers = [];
   let sessions = [];
+  let sessionPollInterval = null;
+
+  function startSessionPolling() {
+    if (sessionPollInterval) return;
+    sessionPollInterval = setInterval(async () => {
+      try {
+        const res = await sessionsApi.listByProject(projectId);
+        const updated = res.data?.items || [];
+        updated.sort((a, b) => new Date(b.created_at || b.start_time || 0) - new Date(a.created_at || a.start_time || 0));
+        const changed = updated.some((u, i) => {
+          const old = sessions[i];
+          return !old || u.bot_status !== old.bot_status;
+        }) || updated.length !== sessions.length;
+        if (changed) {
+          sessions = updated;
+          renderSessionsTab();
+          el.querySelector('[data-bind="statSessions"]').textContent = sessions.length;
+        }
+      } catch (err) { /* ignore */ }
+    }, 5000);
+  }
+
+  el._cleanup = () => {
+    if (sessionPollInterval) { clearInterval(sessionPollInterval); sessionPollInterval = null; }
+  };
 
   // Breadcrumb nav-back
   el.querySelectorAll('.nav-back').forEach(link => {
@@ -250,7 +275,9 @@ export default async function ProjectDetailController(params) {
     try {
       const res = await sessionsApi.listByProject(projectId);
       sessions = res.data?.items || [];
+      sessions.sort((a, b) => new Date(b.created_at || b.start_time || 0) - new Date(a.created_at || a.start_time || 0));
       renderSessionsTab();
+      startSessionPolling();
       el.querySelector('[data-bind="statSessions"]').textContent = sessions.length;
     } catch (err) {
       sessionsLoading.style.display = 'none';
