@@ -20,6 +20,7 @@ const adminRoutes = {
   'agent-detail': () => import('./controllers/admin/AgentDetailController.js'),
   'agent-edit': () => import('./controllers/admin/AgentEditController.js'),
   'agents/:id': () => import('./controllers/admin/AgentDetailController.js'),
+  'personalities': () => import('./controllers/admin/PersonalitiesController.js'),
   'skills': () => import('./controllers/admin/SkillsController.js'),
   'skill-create': () => import('./controllers/admin/SkillCreateController.js'),
   'gmail': () => import('./controllers/admin/GmailCredentialsController.js'),

@@ -1,0 +1,63 @@
+<template id="agent-create">
+  <div class="page">
+    <div class="bc">
+      <a href="#" data-action="navBack" data-to="agents">Agents</a>
+      <span class="sep">›</span>
+      <span class="cur">New Agent</span>
+    </div>
+    <div class="pg-hdr">
+      <div>
+        <h1>Create New Agent</h1>
+        <div class="pg-sub">Configure a new meeting agent instance</div>
+      </div>
+    </div>
+    <div data-bind="formError" style="display:none"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start">
+      <div class="card">
+        <div class="card-hdr"><div class="text-md fw-sb">Agent Configuration</div></div>
+        <div class="card-body">
+          <form id="agent-form">
+            <div class="form-g">
+              <label class="form-l">Agent Name <span class="req">*</span></label>
+              <input class="form-i" name="agent_name" placeholder="e.g. TechSales Bot" required>
+            </div>
+            <div class="form-g">
+              <label class="form-l">Personality <span class="req">*</span></label>
+              <select class="form-sel" name="personality_id" data-bind="personalitySelect">
+                <option value="">Loading personalities...</option>
+              </select>
+              <div class="form-h">Communication style the agent uses when responding.</div>
+            </div>
+            <div class="divider"></div>
+            <div class="form-g">
+              <label class="form-l">Role Prompt <span class="req">*</span></label>
+              <textarea class="form-ta" name="role_prompt" rows="5" placeholder="Describe who the agent is and how it should behave in meetings..."></textarea>
+              <div class="form-h">Defines the agent's identity and overall behavior.</div>
+            </div>
+            <div class="form-g">
+              <label class="form-l">Behavior Guidelines <span class="req">*</span></label>
+              <textarea class="form-ta" name="behavior_guidelines" rows="5" placeholder="e.g. 1. Answer questions using the knowledge base. 2. Be concise..."></textarea>
+              <div class="form-h">Step-by-step task instructions for the agent during meetings.</div>
+            </div>
+          </form>
+        </div>
+      </div>
+      <div>
+        <div class="card mb-4">
+          <div class="card-hdr">
+            <div class="text-md fw-sb">Preview</div>
+            <div class="text-xs text-t">Review before creating</div>
+          </div>
+          <div class="card-body">
+            <div class="text-xs text-t mb-2">Role Prompt Preview</div>
+            <div data-bind="rolePreview" style="font-size:13px;line-height:1.7;color:var(--gray-500);font-family:var(--mono);white-space:pre-wrap;min-height:60px;padding:12px;background:var(--gray-25);border-radius:8px">Enter a role prompt to preview...</div>
+          </div>
+        </div>
+        <div class="flex gap-3 jc-end">
+          <button class="btn btn-s btn-lg" data-action="cancel">Cancel</button>
+          <button class="btn btn-p btn-lg" data-action="create">Create Agent →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
