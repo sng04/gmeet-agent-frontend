@@ -148,8 +148,8 @@ export default async function SessionCreateController(params) {
       const session = res.data;
       hideLoading();
 
-      // Bot should be starting, navigate to live view
-      navigate(`live?sessionId=${session.session_id}`);
+      // Navigate back to project detail
+      navigate(`project/${projectId}`);
     } catch (err) {
       hideLoading();
       

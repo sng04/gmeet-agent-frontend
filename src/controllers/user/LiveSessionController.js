@@ -5,7 +5,7 @@ import { projectsApi } from '../../api/projects.js';
 import { formatDate } from '../../utils/format.js';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog.js';
 
-const WEBSOCKET_URL = import.meta.env.VITE_WEBSOCKET_URL || '';
+const WEBSOCKET_URL = 'wss://nim2yxc596.execute-api.ap-southeast-1.amazonaws.com/production';
 
 const SPEAKER_COLORS = [
   '#3B82F6', '#10B981', '#F59E0B', '#EF4444',
@@ -209,6 +209,7 @@ export default async function LiveSessionController() {
   // ─── WebSocket ───
 
   function connectWebSocket(sid) {
+    console.log('[Transcript] connectWebSocket called:', { sid, wsUrl: WEBSOCKET_URL });
     if (!WEBSOCKET_URL) {
       console.warn('VITE_WEBSOCKET_URL not configured, skipping WebSocket');
       return;
@@ -231,6 +232,7 @@ export default async function LiveSessionController() {
     ws.onmessage = (event) => {
       let data;
       try { data = JSON.parse(event.data); } catch { return; }
+      console.log('[Transcript] WS message:', data.type, data);
 
       if (data.type === 'transcriptLine' && data.line) {
         handleTranscriptLine(data.line);
@@ -335,6 +337,7 @@ export default async function LiveSessionController() {
   // ─── Initialize transcript ───
 
   async function initTranscript(sid, uiStatus) {
+    console.log('[Transcript] init:', { sid, uiStatus, wsUrl: WEBSOCKET_URL });
     try {
       // Fetch historical transcripts
       const historical = await fetchAllTranscripts(sid);
