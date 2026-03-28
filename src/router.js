@@ -43,9 +43,9 @@ const userRoutes = {
   'live-session': () => import('./controllers/user/LiveSessionController.js'),
   'live': () => import('./controllers/user/LiveSessionController.js'),
   'retro-session': () => import('./controllers/user/RetroSessionController.js'),
-  'session/:id': () => import('./controllers/user/RetroSessionController.js'),
   'session-create': () => import('./controllers/user/SessionCreateController.js'),
   'session/create': () => import('./controllers/user/SessionCreateController.js'),
+  'session/:id': () => import('./controllers/user/RetroSessionController.js'),
   'session-history': () => import('./controllers/user/SessionHistoryController.js'),
   'kb': () => import('./controllers/user/KnowledgeBaseController.js'),
 };
@@ -73,7 +73,7 @@ function matchRoute(path, routes) {
   
   // Then try pattern match (routes with params)
   for (const [pattern, loader] of Object.entries(routes)) {
-    if (!pattern.includes(':')) continue;
+    if (!pattern.includes(':')) continue; // Skip exact routes already checked
     
     const paramNames = [];
     const regexPattern = pattern.replace(/:([^/]+)/g, (_, name) => {
@@ -133,7 +133,7 @@ export async function render() {
       appContainer.appendChild(pageEl);
     } catch (err) {
       console.error('Route error:', err);
-      appContainer.innerHTML = `<div class="login-page"><div class="login-card"><h1>Error</h1><p>${err.message}</p></div></div>`;
+      appContainer.innerHTML = '<div class="login-page"><div class="login-card"><h1>Error</h1><p>' + err.message + '</p></div></div>';
     }
     return;
   }
@@ -154,13 +154,11 @@ export async function render() {
   }
 
   // Determine if current path is for admin portal
-  // Note: '' (dashboard) exists in both routes, so check admin-specific routes
   const isAdminOnlyPath = path.startsWith('admin/') || 
     (path !== '' && matchRoute(path, adminRoutes) !== null && matchRoute(path, userRoutes) === null);
   
   // Role-based access control - only redirect for admin-only routes
   if (!isAdmin && isAdminOnlyPath) {
-    // User trying to access admin-only routes - redirect to user dashboard
     console.log('User accessing admin route, redirecting to user dashboard');
     navigate('');
     return;
@@ -192,16 +190,24 @@ export async function render() {
   try {
     const module = await matched.loader();
     const Page = module.default || module[Object.keys(module)[0]];
+    
+    // Cleanup previous page if it has cleanup function
+    const prevPage = mainContainer.firstElementChild;
+    if (prevPage && prevPage._cleanup) {
+      prevPage._cleanup();
+    }
+    
     mainContainer.innerHTML = '';
     const pageEl = await Page(matched.params);
     mainContainer.appendChild(pageEl);
   } catch (err) {
     console.error('Route error:', err);
-    mainContainer.innerHTML = `<div class="page"><h1>Error loading page</h1><p>${err.message}</p></div>`;
+    mainContainer.innerHTML = '<div class="page"><h1>Error loading page</h1><p>' + err.message + '</p></div>';
   }
-}export function navigate(path) {
+}
+
+export function navigate(path) {
   currentPath = null;
-  layoutRendered = false;
   window.history.pushState({}, '', '/' + path);
   render();
 }

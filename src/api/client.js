@@ -1,4 +1,4 @@
-const BASE_URL = 'https://sjsd378hbd.execute-api.ap-southeast-1.amazonaws.com/dev';
+const BASE_URL = 'https://dhytbmhqxa.execute-api.ap-southeast-1.amazonaws.com/dev';
 
 // Set to true to use mock data (for testing without backend)
 const USE_MOCK = false;
