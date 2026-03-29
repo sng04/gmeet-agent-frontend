@@ -2,6 +2,9 @@ import { loadTemplate } from '../../utils/template.js';
 import { navigate } from '../../router.js';
 import { sessionsApi } from '../../api/sessions.js';
 import { projectsApi } from '../../api/projects.js';
+import { qaPairsApi } from '../../api/qaPairs.js';
+import { renderMarkdown } from '../../utils/markdown.js';
+import { MeetingSocket } from '../../api/websocket.js';
 import { formatDate } from '../../utils/format.js';
 
 const SPEAKER_COLORS = [
@@ -59,17 +62,17 @@ function calculateDuration(startTime, endTime) {
   return mins > 0 ? hours + 'h ' + mins + 'm' : hours + 'h';
 }
 
-// Mock Q&A data (will be replaced with real API later)
-const mockQA = [
-  {
-    question: 'What kind of encryption do you use for data at rest?',
-    hostAnswer: 'We use AES-256 via AWS KMS, keys rotated annually.',
-    aiAnswer: 'We use AES-256 encryption for all data at rest, managed through AWS KMS.',
-    confidence: 92,
-    time: '09:05:32',
-    author: 'Client'
-  },
-];
+function parseSummaryChapters(markdown) {
+  if (!markdown) return {};
+  const chapters = {};
+  const sections = markdown.split(/^## /m).filter(Boolean);
+  for (const section of sections) {
+    const [title, ...body] = section.split('\n');
+    const key = title.trim().toLowerCase().replace(/[^a-z ]/g, '');
+    chapters[key] = body.join('\n').trim();
+  }
+  return chapters;
+}
 
 export default async function RetroSessionController(params) {
   const el = await loadTemplate('/templates/user/retro-session.html', 'retro-session');
@@ -90,6 +93,8 @@ export default async function RetroSessionController(params) {
 
   let session = null;
   let project = null;
+  let qaPairs = [];
+  let socket = null;
 
   // ─── Historical transcript fetch ───
 
@@ -112,6 +117,55 @@ export default async function RetroSessionController(params) {
     return allItems;
   }
 
+  // ─── WebSocket message router ───
+
+  function handleWSMessage(data) {
+    switch (data.type) {
+      case 'retroFeedback':
+        handleRetroFeedback(data);
+        break;
+      case 'retroResponse':
+        handleRetroResponse(data);
+        break;
+      case 'error':
+        handleError(data);
+        break;
+      default:
+        break;
+    }
+  }
+
+  function handleRetroFeedback(data) {
+    const feedbackEl = el.querySelector('[data-bind="retroFeedback"]');
+    if (feedbackEl) {
+      feedbackEl.innerHTML = renderMarkdown(data.feedback || '');
+    }
+  }
+
+  function handleRetroResponse(data) {
+    const chatMsgs = el.querySelector('[data-bind="chatMsgs"]');
+    if (!chatMsgs) return;
+    // Remove typing indicator
+    const typing = chatMsgs.querySelector('.chat-test-row.typing');
+    if (typing) typing.remove();
+    // Append AI response
+    chatMsgs.innerHTML += '<div class="chat-test-row"><div class="chat-test-bubble ai-bubble"><div class="agent-lbl">MeetAgent AI</div><div class="chat-test-body">' + renderMarkdown(data.message || '') + '</div></div></div>';
+    chatMsgs.scrollTop = chatMsgs.scrollHeight;
+  }
+
+  function handleError(data) {
+    const chatMsgs = el.querySelector('[data-bind="chatMsgs"]');
+    if (!chatMsgs) return;
+    // Remove typing indicator
+    const typing = chatMsgs.querySelector('.chat-test-row.typing');
+    if (typing) typing.remove();
+    const message = data.message || data.error || 'An error occurred';
+    chatMsgs.innerHTML += '<div class="chat-test-row"><div class="chat-test-bubble ai-bubble" style="border-color:var(--err-200);background:var(--err-50)"><div class="agent-lbl" style="color:var(--err-500)">System</div><div class="chat-test-body" style="color:var(--err-600)">' + message + '</div></div></div>';
+    chatMsgs.scrollTop = chatMsgs.scrollHeight;
+  }
+
+  // ─── Load session ───
+
   async function loadSession() {
     try {
       const sessionRes = await sessionsApi.get(sessionId);
@@ -126,11 +180,40 @@ export default async function RetroSessionController(params) {
         }
       }
 
+      // Fetch QA pairs via REST
+      try {
+        const qaRes = await qaPairsApi.listBySession(sessionId);
+        qaPairs = qaRes.data?.items || qaRes.data || [];
+      } catch (err) {
+        console.warn('Failed to load QA pairs:', err);
+        qaPairs = [];
+        // Show user-facing error in QA tab
+        const qaList = el.querySelector('[data-bind="qaList"]');
+        if (qaList) {
+          qaList.innerHTML = '<div class="empty"><div class="empty-icon">⚠️</div><div class="empty-title">Failed to load Q&A pairs</div><div class="empty-desc">' + (err.message || 'Please try again later') + '</div></div>';
+        }
+      }
+
       pageLoading.style.display = 'none';
       pageContent.style.display = 'block';
 
       populateSessionData();
       setupEventListeners();
+      renderMeetingSummary();
+
+      // Connect WebSocket for retro analysis and chat
+      socket = new MeetingSocket({
+        sessionId,
+        agentId: session.agent_id,
+        onMessage: handleWSMessage,
+        onOpen: () => {
+          // Request coaching feedback once connected
+          socket.retroAnalysis(sessionId);
+        },
+        onClose: () => {},
+        onError: (e) => console.error('WS error:', e),
+      });
+      socket.connect();
     } catch (err) {
       pageLoading.style.display = 'none';
       pageError.style.display = 'block';
@@ -147,7 +230,7 @@ export default async function RetroSessionController(params) {
     el.querySelector('[data-bind="backLink"]').textContent = projectName;
 
     el.querySelector('[data-bind="metaProject"]').textContent = projectName;
-    el.querySelector('[data-bind="metaQA"]').textContent = '—';
+    el.querySelector('[data-bind="metaQA"]').textContent = qaPairs.length > 0 ? qaPairs.length : '—';
     el.querySelector('[data-bind="metaStarted"]').textContent = session.start_time
       ? formatDate(session.start_time, { hour: '2-digit', minute: '2-digit' })
       : '—';
@@ -171,20 +254,82 @@ export default async function RetroSessionController(params) {
     el.querySelector('[data-bind="statusBadge"]').innerHTML = getStatusBadge(uiStatus);
     el.querySelector('[data-bind="statusBadgeInline"]').innerHTML = getStatusBadge(uiStatus);
 
-    el.querySelector('[data-bind="summaryBody"]').textContent = 'Session summary will be generated after analysis.';
-    el.querySelector('[data-bind="insightsBody"]').innerHTML = 'Session insights will be available after analysis.';
-
     renderQAList();
     renderTranscript();
   }
 
+  // ─── Meeting summary rendering ───
+
+  async function renderMeetingSummary() {
+    const summaryContent = el.querySelector('[data-bind="summaryContent"]');
+    const improvementsContent = el.querySelector('[data-bind="improvementsContent"]');
+    const missedItemsContent = el.querySelector('[data-bind="missedItemsContent"]');
+    const actionItemsContent = el.querySelector('[data-bind="actionItemsContent"]');
+    const insightsContent = el.querySelector('[data-bind="insightsContent"]');
+    const loadingHtml = '<div class="loading"><div class="loading-spinner"></div><div class="loading-text">Loading summary...</div></div>';
+    const notAvailable = '<p style="font-size:13px;color:var(--gray-400);line-height:1.6">Summary not yet available. It will be generated after the session ends.</p>';
+
+    // Show loading state
+    if (summaryContent) summaryContent.innerHTML = loadingHtml;
+
+    try {
+      const res = await sessionsApi.getSummary(sessionId);
+      const data = res.data || {};
+      const summaryMarkdown = data.summary_markdown;
+
+      if (!summaryMarkdown || data.status === 'not_generated') {
+        if (summaryContent) summaryContent.innerHTML = notAvailable;
+        if (improvementsContent) improvementsContent.innerHTML = notAvailable;
+        if (missedItemsContent) missedItemsContent.innerHTML = notAvailable;
+        if (actionItemsContent) actionItemsContent.innerHTML = notAvailable;
+        if (insightsContent) insightsContent.innerHTML = notAvailable;
+        return;
+      }
+
+      const chapters = parseSummaryChapters(summaryMarkdown);
+      const noContent = '<p style="font-size:13px;color:var(--gray-400)">No content</p>';
+
+      if (summaryContent) summaryContent.innerHTML = renderMarkdown(chapters['meeting summary'] || '') || noContent;
+      if (improvementsContent) improvementsContent.innerHTML = renderMarkdown(chapters['areas for improvement'] || '') || noContent;
+      if (missedItemsContent) missedItemsContent.innerHTML = renderMarkdown(chapters['missed agenda items'] || '') || noContent;
+      if (actionItemsContent) actionItemsContent.innerHTML = renderMarkdown(chapters['action items  next steps'] || chapters['action items next steps'] || '') || noContent;
+      if (insightsContent) insightsContent.innerHTML = renderMarkdown(chapters['session insights'] || '') || noContent;
+    } catch (err) {
+      console.warn('Failed to fetch summary:', err);
+      if (summaryContent) summaryContent.innerHTML = notAvailable;
+      if (improvementsContent) improvementsContent.innerHTML = notAvailable;
+      if (missedItemsContent) missedItemsContent.innerHTML = notAvailable;
+      if (actionItemsContent) actionItemsContent.innerHTML = notAvailable;
+      if (insightsContent) insightsContent.innerHTML = notAvailable;
+    }
+  }
+
+  // ─── QA list rendering ───
+
   function renderQAList() {
     const qaList = el.querySelector('[data-bind="qaList"]');
-    qaList.innerHTML = mockQA.length > 0
-      ? mockQA.map(qa => '<div class="qa"><div class="flex jc-b items-s mb-4"><div class="text-xs text-t mono">' + qa.time + '</div><span class="badge ' + (qa.confidence >= 90 ? 'b-ok' : 'b-warn') + '">' + qa.confidence + '%</span></div><div class="qa-q"><div class="qi">Q</div><div class="qa-txt q"><span class="qna-author client" style="font-size:10px;margin-right:6px">' + qa.author + '</span>' + qa.question + '</div></div><div class="qa-a mt-2"><div class="ai">A</div><div class="qa-txt">' + qa.hostAnswer + '</div></div><div class="qa-a mt-2"><div class="ai" style="background:var(--gray-100);color:var(--gray-600)">AI</div><div class="qa-txt" style="color:var(--gray-500)">' + qa.aiAnswer + '</div></div></div>').join('')
+    qaList.innerHTML = qaPairs.length > 0
+      ? qaPairs.map(qa => {
+          const question = qa.question || '';
+          const hostAnswer = qa.host_answer || qa.answer || '';
+          const aiAnswer = qa.ai_answer || qa.suggested_answer || '';
+          const confidence = qa.confidence;
+          const time = qa.timestamp ? formatTimestamp(qa.timestamp) : qa.created_at ? formatTimestamp(qa.created_at) : '';
+          const author = qa.author || 'Client';
+
+          return '<div class="qa">'
+            + '<div class="flex jc-b items-s mb-4">'
+            + '<div class="text-xs text-t mono">' + time + '</div>'
+            + (confidence != null ? '<span class="badge ' + (confidence >= 90 ? 'b-ok' : 'b-warn') + '">' + confidence + '%</span>' : '')
+            + '</div>'
+            + '<div class="qa-q"><div class="qi">Q</div><div class="qa-txt q"><span class="qna-author client" style="font-size:10px;margin-right:6px">' + author + '</span>' + question + '</div></div>'
+            + (hostAnswer ? '<div class="qa-a mt-2"><div class="ai">A</div><div class="qa-txt">' + hostAnswer + '</div></div>' : '')
+            + (aiAnswer ? '<div class="qa-a mt-2"><div class="ai" style="background:var(--gray-100);color:var(--gray-600)">AI</div><div class="qa-txt" style="color:var(--gray-500)">' + aiAnswer + '</div></div>' : '')
+            + '</div>';
+        }).join('')
       : '<div class="empty"><div class="empty-icon">💬</div><div class="empty-title">No Q&A pairs</div><div class="empty-desc">No questions were detected</div></div>';
 
-    el.querySelector('[data-bind="qaCountText"]').textContent = mockQA.length + ' Q&A pairs';
+    el.querySelector('[data-bind="qaCountText"]').textContent = qaPairs.length + ' Q&A pairs';
   }
 
   function renderTranscript() {
@@ -212,6 +357,32 @@ export default async function RetroSessionController(params) {
     });
   }
 
+  // ─── Chat helpers ───
+
+  function showNotConnectedNotification() {
+    const chatMsgs = el.querySelector('[data-bind="chatMsgs"]');
+    if (!chatMsgs) return;
+    chatMsgs.innerHTML += '<div class="chat-test-row"><div class="chat-test-bubble ai-bubble" style="border-color:var(--warn-200);background:var(--warn-50)"><div class="agent-lbl" style="color:var(--warn-500)">System</div><div class="chat-test-body" style="color:var(--warn-600)">Not connected — please wait for reconnection.</div></div></div>';
+    chatMsgs.scrollTop = chatMsgs.scrollHeight;
+  }
+
+  function ensureConnected() {
+    if (socket && socket.connected) return true;
+    showNotConnectedNotification();
+    return false;
+  }
+
+  function showTypingIndicator() {
+    const chatMsgs = el.querySelector('[data-bind="chatMsgs"]');
+    if (!chatMsgs) return;
+    if (!chatMsgs.querySelector('.chat-test-row.typing')) {
+      chatMsgs.innerHTML += '<div class="chat-test-row typing"><div class="chat-test-bubble ai-bubble"><div class="agent-lbl">MeetAgent AI</div><div class="chat-test-body" style="color:var(--gray-400)">Thinking...</div></div></div>';
+      chatMsgs.scrollTop = chatMsgs.scrollHeight;
+    }
+  }
+
+  // ─── Event listeners ───
+
   function setupEventListeners() {
     el.querySelector('[data-action="backNav"]').addEventListener('click', (e) => {
       e.preventDefault();
@@ -236,13 +407,13 @@ export default async function RetroSessionController(params) {
 
     const sendChat = () => {
       if (!chatInput.value.trim()) return;
-      chatMsgs.innerHTML += '<div class="chat-msg user">' + chatInput.value + '</div>';
-      const q = chatInput.value;
+      const message = chatInput.value.trim();
+      chatMsgs.innerHTML += '<div class="chat-test-row right"><div class="chat-test-bubble user-bubble">' + message + '</div></div>';
       chatInput.value = '';
-      setTimeout(() => {
-        chatMsgs.innerHTML += '<div class="chat-msg ai"><div class="chat-label">MeetAgent AI</div>Analyzing: ' + q + '...</div>';
-        chatMsgs.scrollTop = chatMsgs.scrollHeight;
-      }, 700);
+      showTypingIndicator();
+      if (ensureConnected()) {
+        socket.retroChat(sessionId, message);
+      }
     };
 
     el.querySelector('[data-action="chatSend"]').addEventListener('click', sendChat);
@@ -251,14 +422,23 @@ export default async function RetroSessionController(params) {
     el.querySelectorAll('.ai-chip').forEach(chip => {
       chip.addEventListener('click', () => {
         const text = chip.textContent;
-        chatMsgs.innerHTML += '<div class="chat-msg user">' + text + '</div>';
-        setTimeout(() => {
-          chatMsgs.innerHTML += '<div class="chat-msg ai"><div class="chat-label">MeetAgent AI</div>Analyzing: ' + text + '...</div>';
-          chatMsgs.scrollTop = chatMsgs.scrollHeight;
-        }, 600);
+        chatMsgs.innerHTML += '<div class="chat-test-row right"><div class="chat-test-bubble user-bubble">' + text + '</div></div>';
+        showTypingIndicator();
+        if (ensureConnected()) {
+          socket.retroChat(sessionId, text);
+        }
       });
     });
   }
+
+  // ─── Cleanup ───
+
+  el._cleanup = () => {
+    if (socket) {
+      socket.disconnect();
+      socket = null;
+    }
+  };
 
   loadSession();
   return el;

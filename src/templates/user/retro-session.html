@@ -34,12 +34,12 @@
         <div class="sess-meta-item"><span>📊</span><strong>Score:</strong> <span data-bind="metaScore"></span></div><div class="sess-meta-div"></div>
         <div class="sess-meta-item" id="sess-status-badge" data-bind="statusBadgeInline"></div>
       </div>
-      <div class="retro-layout">
       <div>
         <div class="tabs">
           <div class="tab active" data-tab="summary">📋 Summary</div>
           <div class="tab" data-tab="qa">💬 Q&A Pairs</div>
           <div class="tab" data-tab="transcript">📝 Full Transcript</div>
+          <div class="tab" data-tab="chat">🤖 AI Chat</div>
         </div>
         <div class="tab-c active" id="tab-summary">
           <div class="retro-s">
@@ -47,7 +47,7 @@
               <div class="retro-s-icon" style="background:var(--pri-50);color:var(--pri-500)">📋</div>
               <div class="retro-s-title">Meeting Summary</div>
             </div>
-            <div class="retro-s-body">
+            <div class="retro-s-body" data-bind="summaryContent">
               <p style="font-size:13px;color:var(--gray-600);line-height:1.6" data-bind="summaryBody"></p>
             </div>
           </div>
@@ -56,12 +56,8 @@
               <div class="retro-s-icon" style="background:var(--warn-50);color:var(--warn-500)">💡</div>
               <div class="retro-s-title">Areas for Improvement</div>
             </div>
-            <div class="retro-s-body">
-              <ul>
-                <li>Prepare a one-pager on compliance certifications for future meetings</li>
-                <li>Include latency benchmarks in the demo materials</li>
-                <li>Consider adding a live architecture diagram walkthrough</li>
-              </ul>
+            <div class="retro-s-body" data-bind="improvementsContent">
+              <p style="font-size:13px;color:var(--gray-500);line-height:1.6">Loading...</p>
             </div>
           </div>
           <div class="retro-s">
@@ -69,11 +65,8 @@
               <div class="retro-s-icon" style="background:var(--err-50);color:var(--err-500)">⚠️</div>
               <div class="retro-s-title">Missed Agenda Items</div>
             </div>
-            <div class="retro-s-body">
-              <ul>
-                <li>Disaster recovery and failover strategy was not discussed</li>
-                <li>SLA terms were mentioned briefly but not covered in detail</li>
-              </ul>
+            <div class="retro-s-body" data-bind="missedItemsContent">
+              <p style="font-size:13px;color:var(--gray-500);line-height:1.6">Loading...</p>
             </div>
           </div>
           <div class="retro-s">
@@ -81,12 +74,8 @@
               <div class="retro-s-icon" style="background:var(--ok-50);color:var(--ok-500)">✅</div>
               <div class="retro-s-title">Action Items / Next Steps</div>
             </div>
-            <div class="retro-s-body">
-              <ul>
-                <li><strong>Sarah:</strong> Send compliance certification documents to Acme by Friday</li>
-                <li><strong>Mike:</strong> Schedule follow-up demo for integration team</li>
-                <li><strong>Sarah:</strong> Prepare SLA proposal document</li>
-              </ul>
+            <div class="retro-s-body" data-bind="actionItemsContent">
+              <p style="font-size:13px;color:var(--gray-500);line-height:1.6">Loading...</p>
             </div>
           </div>
           <div class="retro-s">
@@ -94,8 +83,17 @@
               <div class="retro-s-icon" style="background:var(--info-50);color:var(--info-500)">📊</div>
               <div class="retro-s-title">Session Insights</div>
             </div>
-            <div class="retro-s-body">
+            <div class="retro-s-body" data-bind="insightsContent">
               <p style="font-size:13px;color:var(--gray-600);line-height:1.6" data-bind="insightsBody"></p>
+            </div>
+          </div>
+          <div class="retro-s">
+            <div class="retro-s-hdr">
+              <div class="retro-s-icon" style="background:var(--pri-50);color:var(--pri-500)">🎯</div>
+              <div class="retro-s-title">Coaching Feedback</div>
+            </div>
+            <div class="retro-s-body" data-bind="retroFeedback">
+              <div class="loading"><div class="loading-spinner"></div><div class="loading-text">Generating coaching feedback...</div></div>
             </div>
           </div>
         </div>
@@ -114,28 +112,28 @@
             </div>
           </div>
         </div>
-      </div>
-      <div class="ai-chat-panel">
-        <div class="ai-chat-hdr">
-          <div style="background:var(--pri-50);color:var(--pri-500);width:30px;height:30px;border-radius:6px;display:grid;place-items:center;font-size:14px;flex-shrink:0">🤖</div>
-          <div>
-            <div class="ai-chat-title">AI Chat</div>
-            <div class="ai-chat-sub">Ask about this meeting</div>
+        <div class="tab-c" id="tab-chat">
+          <div class="card">
+            <div class="card-hdr">
+              <div class="text-md fw-sb">AI Chat</div>
+              <div class="text-xs text-t">Ask questions about this meeting</div>
+            </div>
+            <div class="chat-test-panel" style="border:none;border-radius:0">
+              <div class="chat-test-msgs" data-bind="chatMsgs" style="min-height:350px;max-height:500px;overflow-y:auto">
+                <div class="chat-test-row"><div class="chat-test-bubble ai-bubble"><div class="agent-lbl">MeetAgent AI</div><div class="chat-test-body">I've analyzed this session. Ask me about key themes, missed points, or anything from the transcript.</div></div></div>
+              </div>
+              <div style="padding:8px 16px;border-top:1px solid var(--gray-100);display:flex;flex-wrap:wrap;gap:6px">
+                <button class="ai-chip">Key themes?</button>
+                <button class="ai-chip">Draft follow-up email</button>
+                <button class="ai-chip">What was missed?</button>
+              </div>
+              <div class="chat-test-input">
+                <input type="text" placeholder="Ask about this meeting..." data-bind="chatInput">
+                <button data-action="chatSend">Send</button>
+              </div>
+            </div>
           </div>
         </div>
-        <div class="ai-chat-msgs" data-bind="chatMsgs">
-          <div class="chat-msg ai"><div class="chat-label">MeetAgent AI</div>Hi Sarah! I've analyzed the Q3 Architecture Review session. You can ask me about key themes, missed points, or anything from the transcript.</div>
-        </div>
-        <div class="ai-chat-suggested">
-          <button class="ai-chip">Key themes?</button>
-          <button class="ai-chip">Draft follow-up email</button>
-          <button class="ai-chip">What was missed?</button>
-        </div>
-        <div class="ai-chat-input">
-          <input placeholder="Ask about this meeting..." data-bind="chatInput">
-          <button data-action="chatSend">➤</button>
-        </div>
-      </div>
       </div>
     </div>
 

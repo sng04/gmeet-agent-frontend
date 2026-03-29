@@ -26,12 +26,12 @@ export function renderMarkdown(text) {
   s = s.replace(/`([^`\n]+)`/g, '<code>$1</code>');
 
   // Headers h1-h6 (must be at start of line)
-  s = s.replace(/^#{6}\s+(.+)$/gm, '<div style="font-weight:600;font-size:12px;margin:8px 0 4px">$1</div>');
-  s = s.replace(/^#{5}\s+(.+)$/gm, '<div style="font-weight:600;font-size:12px;margin:8px 0 4px">$1</div>');
-  s = s.replace(/^#{4}\s+(.+)$/gm, '<div style="font-weight:600;font-size:13px;margin:8px 0 4px">$1</div>');
-  s = s.replace(/^#{3}\s+(.+)$/gm, '<div style="font-weight:600;font-size:13px;margin:10px 0 4px">$1</div>');
-  s = s.replace(/^#{2}\s+(.+)$/gm, '<div style="font-weight:600;font-size:14px;margin:10px 0 4px">$1</div>');
-  s = s.replace(/^#{1}\s+(.+)$/gm, '<div style="font-weight:600;font-size:15px;margin:10px 0 4px">$1</div>');
+  s = s.replace(/^#{6}\s+(.+)$/gm, '<div style="font-weight:600;font-size:12px;margin:6px 0 2px">$1</div>');
+  s = s.replace(/^#{5}\s+(.+)$/gm, '<div style="font-weight:600;font-size:12px;margin:6px 0 2px">$1</div>');
+  s = s.replace(/^#{4}\s+(.+)$/gm, '<div style="font-weight:600;font-size:13px;margin:6px 0 2px">$1</div>');
+  s = s.replace(/^#{3}\s+(.+)$/gm, '<div style="font-weight:600;font-size:13px;margin:8px 0 2px">$1</div>');
+  s = s.replace(/^#{2}\s+(.+)$/gm, '<div style="font-weight:600;font-size:14px;margin:8px 0 2px">$1</div>');
+  s = s.replace(/^#{1}\s+(.+)$/gm, '<div style="font-weight:600;font-size:15px;margin:8px 0 2px">$1</div>');
 
   // Horizontal rules
   s = s.replace(/^[-*_]{3,}$/gm, '<hr style="border:none;border-top:1px solid var(--gray-200);margin:8px 0">');
@@ -48,14 +48,14 @@ export function renderMarkdown(text) {
   // Blockquotes (> text)
   s = s.replace(/^&gt;\s?(.+)$/gm, '<blockquote style="border-left:3px solid var(--gray-300);padding-left:10px;color:var(--gray-500);margin:4px 0">$1</blockquote>');
 
-  // Unordered lists (- item or * item, but not inside code)
-  s = s.replace(/^[\-\*]\s+(.+)$/gm, '<li>$1</li>');
+  // Unordered lists (- item or * item, with optional leading whitespace for nesting)
+  s = s.replace(/^[ \t]*[\-\*]\s+(.+)$/gm, '<li>$1</li>');
 
-  // Numbered lists (1. item)
-  s = s.replace(/^\d+\.\s+(.+)$/gm, '<li>$1</li>');
+  // Numbered lists (1. item, with optional leading whitespace)
+  s = s.replace(/^[ \t]*\d+\.\s+(.+)$/gm, '<li>$1</li>');
 
   // Wrap consecutive <li> in <ul>
-  s = s.replace(/((?:<li>.*<\/li>\s*)+)/g, '<ul style="margin:4px 0;padding-left:20px">$1</ul>');
+  s = s.replace(/((?:<li>.*<\/li>\s*)+)/g, '<ul>$1</ul>');
 
   // Links [text](url)
   s = s.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener" style="color:var(--pri-500)">$1</a>');

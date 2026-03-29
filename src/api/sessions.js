@@ -46,6 +46,12 @@ export const sessionsApi = {
     return api.get(`/sessions/${id}/transcripts${qs ? `?${qs}` : ''}`);
   },
 
+  // Get meeting summary
+  getSummary: (id) => api.get(`/sessions/${id}/summary`),
+
+  // Get auto-generated suggested questions
+  getSuggestedQuestions: (id) => api.get(`/sessions/${id}/suggested-questions`),
+
   // Legacy endpoints (keep for backward compatibility)
   getQA: (id) => api.get(`/sessions/${id}/qa`),
   getTranscript: (id) => api.get(`/sessions/${id}/transcript`),

@@ -47,23 +47,15 @@
           </div>
           <div>
             <div class="tabs" style="margin-bottom:16px">
-              <div class="tab active" data-tab="live-suggest">💡 Suggested Questions</div>
+              <div class="tab active" data-tab="live-gaps">⚠️ Knowledge Gaps</div>
               <div class="tab" data-tab="live-transcript">📝 Live Transcript</div>
             </div>
-            <div class="tab-c active" id="tab-live-suggest">
-              <div class="card mb-4" style="border-color:var(--pri-200);background:var(--pri-25)">
-                <div class="card-body" style="padding:12px 16px">
-                  <div class="text-xs mono fw-m" style="color:var(--pri-600);margin-bottom:4px">💡 AGENT SUGGESTION</div>
-                  <div class="text-sm fw-m text-p mb-4">Ask about their disaster recovery requirements — this topic hasn't come up but is likely important for an enterprise client.</div>
-                  <div class="text-xs text-t">Based on: knowledge gap in <code>Platform Architecture Overview.pdf</code></div>
-                </div>
-              </div>
-              <div class="card mb-4" style="border-color:var(--warn-100);background:var(--warn-50)">
-                <div class="card-body" style="padding:12px 16px">
-                  <div class="text-xs mono fw-m" style="color:var(--warn-700);margin-bottom:4px">⚠️ KNOWLEDGE GAP</div>
-                  <div class="text-sm fw-m text-p mb-4">SLA terms and uptime guarantees are not covered in any document — if asked, the agent cannot answer confidently.</div>
-                  <div class="text-xs text-t">Missing from: all indexed documents</div>
-                </div>
+            <div class="tab-c active" id="tab-live-gaps">
+              <!-- Question Match Notifications -->
+              <div data-bind="questionMatchNotifications"></div>
+              <!-- Knowledge Gaps (auto-loaded on connect) -->
+              <div data-bind="gapCards">
+                <div class="loading"><div class="loading-spinner"></div><div class="loading-text">Analyzing knowledge gaps...</div></div>
               </div>
             </div>
             <div class="tab-c" id="tab-live-transcript">
@@ -116,25 +108,24 @@
               </div>
             </div>
           </div>
-          <div class="ai-chat-panel">
-            <div class="ai-chat-hdr">
-              <div style="background:var(--pri-50);color:var(--pri-500);width:30px;height:30px;border-radius:6px;display:grid;place-items:center;font-size:14px;flex-shrink:0">🤖</div>
-              <div>
-                <div class="ai-chat-title">AI Chat</div>
-                <div class="ai-chat-sub">Ask about this session</div>
+          <div class="card" style="position:sticky;top:24px">
+            <div class="card-hdr">
+              <div class="text-md fw-sb">AI Chat</div>
+              <div class="text-xs text-t">Ask about this session</div>
+            </div>
+            <div class="chat-test-panel" style="border:none;border-radius:0">
+              <div class="chat-test-msgs" data-bind="chatMsgs" style="min-height:280px;max-height:420px;overflow-y:auto">
+                <div class="chat-test-row"><div class="chat-test-bubble ai-bubble"><div class="agent-lbl">MeetAgent AI</div><div class="chat-test-body">I've analyzed this session. Ask me about the Q&A, what's been covered, or anything from the transcript.</div></div></div>
               </div>
-            </div>
-            <div class="ai-chat-msgs" data-bind="chatMsgs">
-              <div class="chat-msg ai"><div class="chat-label">MeetAgent AI</div>Hi! I've analyzed this session so far. Ask me about the Q&A, what's been covered, or anything from the transcript.</div>
-            </div>
-            <div class="ai-chat-suggested">
-              <button class="ai-chip">Key themes?</button>
-              <button class="ai-chip">Draft follow-up email</button>
-              <button class="ai-chip">What was missed?</button>
-            </div>
-            <div class="ai-chat-input">
-              <input placeholder="Ask about this session..." data-bind="chatInput">
-              <button data-action="chatSend">➤</button>
+              <div style="padding:8px 16px;border-top:1px solid var(--gray-100);display:flex;flex-wrap:wrap;gap:6px">
+                <button class="ai-chip">Key themes?</button>
+                <button class="ai-chip">Draft follow-up email</button>
+                <button class="ai-chip">What was missed?</button>
+              </div>
+              <div class="chat-test-input">
+                <input type="text" placeholder="Ask about this session..." data-bind="chatInput">
+                <button data-action="chatSend">Send</button>
+              </div>
             </div>
           </div>
         </div>

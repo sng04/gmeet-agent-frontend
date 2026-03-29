@@ -4,6 +4,7 @@ import { Button } from '../../components/ui/Button.js';
 import { Alert } from '../../components/ui/Alert.js';
 import { showLoading, hideLoading } from '../../components/ui/Loading.js';
 import { projectsApi } from '../../api/projects.js';
+import { agentsApi } from '../../api/agents.js';
 import { botCredentialApi } from '../../api/botCredential.js';
 
 export default async function ProjectCreateController() {
@@ -11,19 +12,20 @@ export default async function ProjectCreateController() {
 
   const alertContainer = el.querySelector('[data-bind="alertContainer"]');
 
-  // Populate agent select with mock data (to be replaced later)
+  // Populate agent select from API
   const agentSelect = el.querySelector('[data-bind="agentSelect"]');
-  const mockAgents = [
-    { value: 'agent-1', label: 'TechSales Bot' },
-    { value: 'agent-2', label: 'Demo Agent' },
-    { value: 'agent-3', label: 'Support Agent' },
-  ];
-  mockAgents.forEach(a => {
-    const opt = document.createElement('option');
-    opt.value = a.value;
-    opt.textContent = a.label;
-    agentSelect.appendChild(opt);
-  });
+  try {
+    const agentRes = await agentsApi.list();
+    const agents = agentRes.data?.items || agentRes.data || [];
+    (Array.isArray(agents) ? agents : []).forEach(a => {
+      const opt = document.createElement('option');
+      opt.value = a.agent_id;
+      opt.textContent = a.agent_name;
+      agentSelect.appendChild(opt);
+    });
+  } catch (err) {
+    console.warn('Failed to load agents:', err);
+  }
 
   // Load active gmail credentials
   const gmailSelect = el.querySelector('[data-bind="gmailSelect"]');

@@ -277,24 +277,25 @@
 
 .retro-s-title { font-size: 16px; font-weight: 600; }
 
-.retro-s-body { padding: 20px; }
-.retro-s-body ul { list-style: none; }
+.retro-s-body { padding: 16px 20px; font-size: 13px; line-height: 1.5; color: var(--gray-600); }
+.retro-s-body p { margin: 0 0 6px 0; }
+.retro-s-body ul { list-style: none; margin: 2px 0; padding-left: 8px; }
 
 .retro-s-body li {
-  padding: 8px 0 8px 20px;
+  padding: 3px 0 3px 16px;
   position: relative;
   font-size: 13px;
   color: var(--gray-600);
-  line-height: 1.6;
+  line-height: 1.5;
 }
 
 .retro-s-body li::before {
   content: '';
   position: absolute;
   left: 0;
-  top: 14px;
-  width: 6px;
-  height: 6px;
+  top: 10px;
+  width: 5px;
+  height: 5px;
   border-radius: 99px;
   background: var(--gray-300);
 }

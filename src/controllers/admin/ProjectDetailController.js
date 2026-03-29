@@ -8,6 +8,8 @@ import { projectsApi } from '../../api/projects.js';
 import { sessionsApi } from '../../api/sessions.js';
 import { botCredentialApi } from '../../api/botCredential.js';
 import { usersApi } from '../../api/users.js';
+import { kbDocumentsApi } from '../../api/kbDocuments.js';
+import { agentsApi } from '../../api/agents.js';
 import { formatDate } from '../../utils/format.js';
 
 // Bot status to UI status mapping
@@ -52,12 +54,6 @@ function calculateDuration(startTime, endTime = null) {
   return mins > 0 ? hours + 'h ' + mins + 'm' : hours + 'h';
 }
 
-const mockDocs = [
-  { name: 'Platform Architecture Overview.pdf', type: 'pdf', size: '2.4 MB', status: 'indexed', uploaded: 'Mar 10, 2026' },
-  { name: 'API Reference Guide.docx', type: 'docx', size: '1.1 MB', status: 'indexed', uploaded: 'Mar 10, 2026' },
-  { name: 'Security Compliance Checklist.pdf', type: 'pdf', size: '890 KB', status: 'indexed', uploaded: 'Mar 12, 2026' },
-];
-
 export default async function ProjectDetailController(params) {
   const el = await loadTemplate('/templates/admin/project-detail.html', 'project-detail');
   const projectId = params?.id;
@@ -84,6 +80,7 @@ export default async function ProjectDetailController(params) {
   let assignedUsers = [];
   let allUsers = [];
   let sessions = [];
+  let kbDocuments = [];
   let sessionPollInterval = null;
 
   function startSessionPolling() {
@@ -155,22 +152,33 @@ export default async function ProjectDetailController(params) {
     }
   }
 
-  function populateProjectData() {
+  async function populateProjectData() {
     // Header
     el.querySelector('[data-bind="projectName"]').textContent = project.name || 'Untitled';
     el.querySelector('[data-bind="title"]').textContent = project.name || 'Untitled';
     el.querySelector('[data-bind="description"]').textContent = project.description || 'No description';
 
     // Stats
-    el.querySelector('[data-bind="statAgent"]').textContent = '—';
+    el.querySelector('[data-bind="statAgent"]').textContent = 'Loading...';
     el.querySelector('[data-bind="statGmail"]').textContent = credentialEmail || 'Not assigned';
-    el.querySelector('[data-bind="statKbPrefix"]').innerHTML = `<code>${project.name?.toLowerCase().replace(/\s+/g, '-') || 'project'}</code>`;
     el.querySelector('[data-bind="statUsers"]').textContent = project.total_users ?? 0;
     el.querySelector('[data-bind="statSessions"]').textContent = project.total_sessions ?? 0;
 
+    // Fetch agent name
+    if (project.agent_id) {
+      try {
+        const agentRes = await agentsApi.get(project.agent_id);
+        el.querySelector('[data-bind="statAgent"]').textContent = agentRes.data?.agent_name || 'Unknown';
+      } catch (err) {
+        el.querySelector('[data-bind="statAgent"]').textContent = 'Not found';
+      }
+    } else {
+      el.querySelector('[data-bind="statAgent"]').textContent = 'Not assigned';
+    }
+
     // KB
-    el.querySelector('[data-bind="kbMeta"]').textContent = `${mockDocs.length} documents · Last updated Mar 12, 2026`;
-    renderKbDocs();
+    el.querySelector('[data-bind="kbMeta"]').textContent = 'Loading documents...';
+    loadKbDocuments();
 
     // Edit button
     el.querySelector('[data-bind="actions"]').appendChild(
@@ -178,36 +186,97 @@ export default async function ProjectDetailController(params) {
     );
   }
 
+  async function loadKbDocuments() {
+    try {
+      const res = await kbDocumentsApi.list(projectId);
+      const d = res.data;
+      kbDocuments = Array.isArray(d) ? d : (d?.items || d?.documents || (Array.isArray(d?.data) ? d.data : []));
+      el.querySelector('[data-bind="kbMeta"]').textContent = kbDocuments.length + ' document' + (kbDocuments.length !== 1 ? 's' : '');
+      renderKbDocs();
+    } catch (err) {
+      console.warn('Failed to load KB documents:', err);
+      kbDocuments = [];
+      el.querySelector('[data-bind="kbMeta"]').textContent = 'Failed to load';
+      renderKbDocs();
+    }
+  }
+
   function renderKbDocs() {
-    el.querySelector('[data-bind="kbContent"]').innerHTML = `
-      <table style="width:100%;border-collapse:collapse">
-        <thead>
-          <tr>
-            <th style="text-align:left;font-size:11px;font-weight:500;color:var(--gray-500);text-transform:uppercase;letter-spacing:.05em;padding:10px 20px;border-bottom:1px solid var(--gray-100);background:var(--gray-25)">Document</th>
-            <th style="text-align:left;font-size:11px;font-weight:500;color:var(--gray-500);text-transform:uppercase;padding:10px 20px;border-bottom:1px solid var(--gray-100);background:var(--gray-25)">Size</th>
-            <th style="text-align:left;font-size:11px;font-weight:500;color:var(--gray-500);text-transform:uppercase;padding:10px 20px;border-bottom:1px solid var(--gray-100);background:var(--gray-25)">Status</th>
-            <th style="text-align:left;font-size:11px;font-weight:500;color:var(--gray-500);text-transform:uppercase;padding:10px 20px;border-bottom:1px solid var(--gray-100);background:var(--gray-25)">Uploaded</th>
-            <th style="padding:10px 20px;border-bottom:1px solid var(--gray-100);background:var(--gray-25)"></th>
-          </tr>
-        </thead>
-        <tbody>
-          ${mockDocs.map((doc, i) => `
-            <tr>
-              <td style="padding:12px 20px;${i < mockDocs.length - 1 ? 'border-bottom:1px solid var(--gray-100)' : ''}">
-                <div class="flex items-c gap-3">
-                  <div>${doc.type === 'pdf' ? '📕' : '📘'}</div>
-                  <div class="text-sm fw-m text-p">${doc.name}</div>
-                </div>
-              </td>
-              <td style="padding:12px 20px;font-family:var(--mono);font-size:13px;${i < mockDocs.length - 1 ? 'border-bottom:1px solid var(--gray-100)' : ''}">${doc.size}</td>
-              <td style="padding:12px 20px;${i < mockDocs.length - 1 ? 'border-bottom:1px solid var(--gray-100)' : ''}"><span class="badge b-ok"><span class="dot"></span> ${doc.status}</span></td>
-              <td style="padding:12px 20px;font-size:12px;${i < mockDocs.length - 1 ? 'border-bottom:1px solid var(--gray-100)' : ''}">${doc.uploaded}</td>
-              <td style="padding:12px 20px;${i < mockDocs.length - 1 ? 'border-bottom:1px solid var(--gray-100)' : ''}"><button class="btn btn-d btn-sm">Delete</button></td>
-            </tr>
-          `).join('')}
-        </tbody>
-      </table>
-    `;
+    const container = el.querySelector('[data-bind="kbContent"]');
+
+    if (kbDocuments.length === 0) {
+      container.innerHTML = '<div class="empty" style="padding:24px"><div class="empty-icon">📚</div><div class="empty-title">No documents yet</div><div class="empty-desc">Upload PDF or Markdown files for the AI agent to reference</div></div>';
+      return;
+    }
+
+    const getIcon = (name) => {
+      if (name?.endsWith('.pdf')) return '📕';
+      if (name?.endsWith('.md')) return '📘';
+      return '📄';
+    };
+
+    const getStatusBadgeKB = (status) => {
+      const map = { indexed: 'b-ok', pending: 'b-warn', failed: 'b-err', processing: 'b-pri' };
+      return '<span class="badge ' + (map[status] || 'b-gray') + '"><span class="dot"></span> ' + (status || 'unknown') + '</span>';
+    };
+
+    container.innerHTML = '<table style="width:100%;border-collapse:collapse"><thead><tr>'
+      + '<th style="text-align:left;font-size:11px;font-weight:500;color:var(--gray-500);text-transform:uppercase;letter-spacing:.05em;padding:10px 20px;border-bottom:1px solid var(--gray-100);background:var(--gray-25)">Document</th>'
+      + '<th style="text-align:left;font-size:11px;font-weight:500;color:var(--gray-500);text-transform:uppercase;padding:10px 20px;border-bottom:1px solid var(--gray-100);background:var(--gray-25)">Description</th>'
+      + '<th style="text-align:left;font-size:11px;font-weight:500;color:var(--gray-500);text-transform:uppercase;padding:10px 20px;border-bottom:1px solid var(--gray-100);background:var(--gray-25)">Status</th>'
+      + '<th style="text-align:left;font-size:11px;font-weight:500;color:var(--gray-500);text-transform:uppercase;padding:10px 20px;border-bottom:1px solid var(--gray-100);background:var(--gray-25)">Uploaded</th>'
+      + '<th style="padding:10px 20px;border-bottom:1px solid var(--gray-100);background:var(--gray-25)"></th>'
+      + '</tr></thead><tbody>'
+      + kbDocuments.map((doc, i) => {
+          const border = i < kbDocuments.length - 1 ? 'border-bottom:1px solid var(--gray-100)' : '';
+          const uploaded = doc.created_at ? formatDate(doc.created_at) : '—';
+          return '<tr>'
+            + '<td style="padding:12px 20px;' + border + '"><div class="flex items-c gap-3">' + getIcon(doc.file_name) + ' <span class="text-sm fw-m text-p">' + (doc.file_name || '—') + '</span></div></td>'
+            + '<td style="padding:12px 20px;font-size:12px;color:var(--gray-500);' + border + '">' + (doc.description || '—') + '</td>'
+            + '<td style="padding:12px 20px;' + border + '">' + getStatusBadgeKB(doc.status) + '</td>'
+            + '<td style="padding:12px 20px;font-size:12px;' + border + '">' + uploaded + '</td>'
+            + '<td style="padding:12px 20px;' + border + '"><button class="btn btn-d btn-sm" data-action="kbDelete" data-doc-id="' + doc.document_id + '">Delete</button></td>'
+            + '</tr>';
+        }).join('')
+      + '</tbody></table>';
+  }
+
+  async function handleKbUpload(file) {
+    showLoading('Uploading ' + file.name + '...');
+    try {
+      const res = await kbDocumentsApi.create(projectId, { file_name: file.name, description: '' });
+      const uploadUrl = res.data?.upload_url;
+      const contentType = res.data?.content_type || 'application/octet-stream';
+      if (!uploadUrl) throw new Error('No upload URL returned');
+
+      const uploadRes = await fetch(uploadUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': contentType },
+        body: file,
+      });
+      if (!uploadRes.ok) throw new Error('S3 upload failed: ' + uploadRes.status);
+
+      hideLoading();
+      await loadKbDocuments();
+    } catch (err) {
+      hideLoading();
+      alert('Failed to upload: ' + err.message);
+    }
+  }
+
+  function handleKbDelete(docId) {
+    const doc = kbDocuments.find(d => d.document_id === docId);
+    ConfirmDialog({
+      title: 'Delete Document',
+      message: 'Are you sure you want to delete "' + (doc?.file_name || 'this document') + '"?',
+      warning: 'This will also remove the document from the AI knowledge base.',
+      confirmText: 'Delete',
+      confirmingText: 'Deleting...',
+      loadingMessage: 'Deleting document...',
+      onConfirm: () => kbDocumentsApi.delete(projectId, docId),
+      onSuccess: () => loadKbDocuments(),
+      onError: (err) => alert('Failed to delete: ' + err.message),
+    });
   }
 
   function renderSessionsTab() {
@@ -322,12 +391,33 @@ export default async function ProjectDetailController(params) {
 
     // KB toggle
     el.querySelector('[data-action="kbToggle"]')?.addEventListener('click', (e) => {
-      if (!e.target.closest('.upload-zone')) {
+      if (!e.target.closest('.upload-zone') && !e.target.closest('[data-bind="kbFileInput"]')) {
         const content = el.querySelector('[data-bind="kbContent"]');
         const toggleText = el.querySelector('[data-bind="kbToggleText"]');
         const isHidden = content.style.display === 'none';
         content.style.display = isHidden ? '' : 'none';
         toggleText.textContent = isHidden ? '▲ collapse' : '▼ expand';
+      }
+    });
+
+    // KB upload
+    el.querySelector('[data-action="kbUploadClick"]')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      el.querySelector('[data-bind="kbFileInput"]')?.click();
+    });
+    el.querySelector('[data-bind="kbFileInput"]')?.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        handleKbUpload(file);
+        e.target.value = '';
+      }
+    });
+
+    // KB delete (delegated)
+    el.addEventListener('click', (e) => {
+      const deleteBtn = e.target.closest('[data-action="kbDelete"]');
+      if (deleteBtn) {
+        handleKbDelete(deleteBtn.dataset.docId);
       }
     });
   }

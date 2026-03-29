@@ -95,7 +95,6 @@ export default async function SessionCreateController(params) {
     const name = el.querySelector('[name="name"]').value.trim();
     let meeting_link = el.querySelector('[name="meeting_link"]').value.trim();
     const description = el.querySelector('[name="description"]').value.trim();
-    const style = el.querySelector('[name="style"]').value;
 
     // Validation
     if (!name) {
@@ -127,17 +126,11 @@ export default async function SessionCreateController(params) {
       return;
     }
 
-    if (!style) {
-      alertContainer.appendChild(Alert({ message: 'Please select an assistant style', variant: 'error' }));
-      return;
-    }
-
     // Build payload
     const payload = {
       project_id: projectId,
       name,
       meeting_link,
-      style,
     };
     if (description) payload.description = description;
 

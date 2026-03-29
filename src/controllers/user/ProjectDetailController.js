@@ -3,17 +3,15 @@ import { Button } from '../../components/ui/Button.js';
 import { navigate } from '../../router.js';
 import { projectsApi } from '../../api/projects.js';
 import { sessionsApi } from '../../api/sessions.js';
+import { kbDocumentsApi } from '../../api/kbDocuments.js';
+import { agentsApi } from '../../api/agents.js';
 import { formatDate } from '../../utils/format.js';
+import { ConfirmDialog } from '../../components/ui/ConfirmDialog.js';
 
-// Mock data for Q&A and docs (will be replaced later)
+// Mock data for Q&A (will be replaced later)
 const mockQA = [
   { session: 'Integration Planning', date: 'Today, 10:31 AM', question: 'Can we integrate this with our existing Slack workspace?', answer: 'Currently, the system focuses on Google Meet integration. Slack integration is not in the current scope, but the architecture supports future webhook-based integrations.', confidence: 94 },
   { session: 'Q3 Architecture Review', date: 'Mar 15, 09:05 AM', question: 'What kind of encryption do you use for data at rest?', answer: 'We use AES-256 encryption for all data at rest, managed through AWS KMS. All keys are rotated annually.', confidence: 92 },
-];
-
-const mockDocs = [
-  { name: 'Platform Architecture Overview.pdf', type: 'pdf', size: '2.4 MB', status: 'indexed', uploaded: 'Mar 10, 2026' },
-  { name: 'API Reference Guide.docx', type: 'docx', size: '1.1 MB', status: 'indexed', uploaded: 'Mar 10, 2026' },
 ];
 
 // Bot status to UI status mapping
@@ -81,6 +79,7 @@ export default async function ProjectDetailController(params) {
 
   let project = null;
   let sessions = [];
+  let kbDocuments = [];
   let sessionPollInterval = null;
 
   function startSessionPolling() {
@@ -199,30 +198,39 @@ export default async function ProjectDetailController(params) {
     }
   }
 
-  function populateProjectData() {
+  async function populateProjectData() {
     // Header
     el.querySelector('[data-bind="projectName"]').textContent = project.name || 'Untitled';
     el.querySelector('[data-bind="title"]').textContent = project.name || 'Untitled';
     el.querySelector('[data-bind="description"]').textContent = project.description || 'No description';
 
     // Stats
-    el.querySelector('[data-bind="statAgent"]').textContent = project.agent_id ? 'Agent assigned' : '—';
+    el.querySelector('[data-bind="statAgent"]').textContent = 'Loading...';
     el.querySelector('[data-bind="statSessions"]').textContent = project.total_sessions ?? 0;
     el.querySelector('[data-bind="statQA"]').textContent = '—';
+
+    // Fetch agent name
+    if (project.agent_id) {
+      try {
+        const agentRes = await agentsApi.get(project.agent_id);
+        el.querySelector('[data-bind="statAgent"]').textContent = agentRes.data?.agent_name || 'Unknown';
+      } catch (err) {
+        el.querySelector('[data-bind="statAgent"]').textContent = 'Not found';
+      }
+    } else {
+      el.querySelector('[data-bind="statAgent"]').textContent = '—';
+    }
     el.querySelector('[data-bind="qaTotalVal"]').textContent = '—';
 
     // KB
-    el.querySelector('[data-bind="kbFolderName"]').textContent = project.name || 'Project';
-    el.querySelector('[data-bind="kbFolderMeta"]').textContent = `${mockDocs.length} documents · Last updated Mar 12, 2026`;
-    el.querySelector('[data-bind="kbFolderTag"]').textContent = `prefix: ${project.name?.toLowerCase().replace(/\s+/g, '-') || 'project'}`;
+    loadKBDocuments();
 
     // Hide live banner initially (will be shown if there's a live session)
     const liveBanner = el.querySelector('[data-bind="liveBanner"]');
     if (liveBanner) liveBanner.style.display = 'none';
 
-    // Render Q&A and KB tabs (still mock)
+    // Render Q&A tab (still mock)
     renderQATab();
-    renderKBTab();
 
     // Actions - pass projectId to session create
     el.querySelector('[data-bind="actions"]').appendChild(
@@ -292,19 +300,119 @@ export default async function ProjectDetailController(params) {
   }
 
   function renderKBTab() {
-    el.querySelector('[data-bind="kbDocsBody"]').innerHTML = mockDocs.map((doc, i) => `
-      <tr>
-        <td style="padding:12px 20px;${i < mockDocs.length - 1 ? 'border-bottom:1px solid var(--gray-100)' : ''}">
-          <div class="flex items-c gap-3">
-            <div class="doc-icon ${doc.type}">${doc.type === 'pdf' ? '📕' : '📘'}</div>
-            <div class="text-sm fw-m text-p">${doc.name}</div>
-          </div>
-        </td>
-        <td style="padding:12px 20px;font-family:var(--mono);font-size:13px;${i < mockDocs.length - 1 ? 'border-bottom:1px solid var(--gray-100)' : ''}">${doc.size}</td>
-        <td style="padding:12px 20px;${i < mockDocs.length - 1 ? 'border-bottom:1px solid var(--gray-100)' : ''}"><span class="badge b-indexed"><span class="dot"></span> ${doc.status}</span></td>
-        <td style="padding:12px 20px;font-size:12px;color:var(--gray-500);${i < mockDocs.length - 1 ? 'border-bottom:1px solid var(--gray-100)' : ''}">${doc.uploaded}</td>
-      </tr>
-    `).join('');
+    const tbody = el.querySelector('[data-bind="kbDocsBody"]');
+    const kbContent = el.querySelector('[data-bind="kbContent"]');
+    const kbEmpty = el.querySelector('[data-bind="kbEmpty"]');
+    const kbDocCount = el.querySelector('[data-bind="kbDocCount"]');
+
+    if (kbDocuments.length === 0) {
+      if (kbContent) kbContent.style.display = 'none';
+      if (kbEmpty) kbEmpty.style.display = 'block';
+      if (kbDocCount) kbDocCount.textContent = '';
+      return;
+    }
+
+    if (kbContent) kbContent.style.display = 'block';
+    if (kbEmpty) kbEmpty.style.display = 'none';
+    if (kbDocCount) kbDocCount.textContent = kbDocuments.length + ' document' + (kbDocuments.length !== 1 ? 's' : '');
+
+    const getIcon = (name) => {
+      if (name?.endsWith('.pdf')) return '📕';
+      if (name?.endsWith('.md')) return '📘';
+      return '📄';
+    };
+
+    const getStatusBadgeKB = (status) => {
+      const map = { indexed: 'b-ok', pending: 'b-warn', failed: 'b-err', processing: 'b-pri' };
+      return '<span class="badge ' + (map[status] || 'b-gray') + '"><span class="dot"></span> ' + (status || 'unknown') + '</span>';
+    };
+
+    tbody.innerHTML = kbDocuments.map(doc => {
+      const uploaded = doc.created_at ? formatDate(doc.created_at) : '—';
+      return '<tr>'
+        + '<td><div class="flex items-c gap-3">' + getIcon(doc.file_name) + ' <span class="text-sm fw-m text-p">' + (doc.file_name || '—') + '</span></div></td>'
+        + '<td class="text-xs text-t">' + (doc.description || '—') + '</td>'
+        + '<td>' + getStatusBadgeKB(doc.status) + '</td>'
+        + '<td class="text-xs text-t">' + uploaded + '</td>'
+        + '<td style="text-align:right"><button class="btn btn-d btn-sm" data-action="kbDelete" data-doc-id="' + doc.document_id + '">Delete</button></td>'
+        + '</tr>';
+    }).join('');
+  }
+
+  async function loadKBDocuments() {
+    const kbLoading = el.querySelector('[data-bind="kbLoading"]');
+    try {
+      const res = await kbDocumentsApi.list(projectId);
+      const d = res.data;
+      kbDocuments = Array.isArray(d) ? d : (d?.items || d?.documents || (Array.isArray(d?.data) ? d.data : []));
+      if (kbLoading) kbLoading.style.display = 'none';
+      renderKBTab();
+    } catch (err) {
+      console.warn('Failed to load KB documents:', err);
+      kbDocuments = [];
+      if (kbLoading) kbLoading.style.display = 'none';
+      renderKBTab();
+    }
+  }
+
+  async function handleKBUpload() {
+    const fileInput = el.querySelector('[data-bind="kbFileInput"]');
+    fileInput.click();
+  }
+
+  async function uploadFile(file) {
+    const statusEl = el.querySelector('[data-bind="kbUploadStatus"]');
+    statusEl.style.display = 'block';
+    statusEl.innerHTML = '<div class="card mb-4" style="border-color:var(--pri-200);background:var(--pri-25)"><div class="card-body" style="padding:10px 16px"><div class="flex items-c gap-3"><div class="loading-spinner" style="width:16px;height:16px;border-width:2px"></div><span class="text-sm">Uploading ' + file.name + '...</span></div></div></div>';
+
+    try {
+      // Step 1: Create document record and get pre-signed URL
+      const res = await kbDocumentsApi.create(projectId, {
+        file_name: file.name,
+        description: '',
+      });
+      const uploadUrl = res.data?.upload_url;
+      const contentType = res.data?.content_type || 'application/octet-stream';
+      if (!uploadUrl) throw new Error('No upload URL returned');
+
+      // Step 2: Upload file to S3 via pre-signed URL
+      const uploadRes = await fetch(uploadUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': contentType },
+        body: file,
+      });
+      if (!uploadRes.ok) throw new Error('S3 upload failed: ' + uploadRes.status);
+
+      statusEl.innerHTML = '<div class="card mb-4" style="border-color:var(--ok-200);background:var(--ok-50)"><div class="card-body" style="padding:10px 16px"><span class="text-sm" style="color:var(--ok-700)">✅ ' + file.name + ' uploaded successfully</span></div></div>';
+      setTimeout(() => { statusEl.style.display = 'none'; }, 4000);
+
+      // Refresh the list
+      await loadKBDocuments();
+    } catch (err) {
+      statusEl.innerHTML = '<div class="card mb-4" style="border-color:var(--err-200);background:var(--err-50)"><div class="card-body" style="padding:10px 16px"><span class="text-sm" style="color:var(--err-700)">Failed to upload: ' + err.message + '</span></div></div>';
+      setTimeout(() => { statusEl.style.display = 'none'; }, 6000);
+    }
+  }
+
+  async function handleKBDelete(docId) {
+    const doc = kbDocuments.find(d => d.document_id === docId);
+    ConfirmDialog({
+      title: 'Delete Document',
+      message: 'Are you sure you want to delete "' + (doc?.file_name || 'this document') + '"?',
+      warning: 'This will also remove the document from the AI knowledge base.',
+      confirmText: 'Delete',
+      confirmingText: 'Deleting...',
+      loadingMessage: 'Deleting document...',
+      onConfirm: async () => {
+        await kbDocumentsApi.delete(projectId, docId);
+      },
+      onSuccess: () => {
+        loadKBDocuments();
+      },
+      onError: (err) => {
+        alert('Failed to delete: ' + err.message);
+      },
+    });
   }
 
   function setupEventListeners() {
@@ -330,6 +438,19 @@ export default async function ProjectDetailController(params) {
         navigate(`live?sessionId=${sessionId}`);
       } else if (action === 'review') {
         navigate(`session/${sessionId}`);
+      } else if (action === 'kbUpload') {
+        handleKBUpload();
+      } else if (action === 'kbDelete') {
+        handleKBDelete(btn.dataset.docId);
+      }
+    });
+
+    // File input change handler
+    el.querySelector('[data-bind="kbFileInput"]').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        uploadFile(file);
+        e.target.value = ''; // Reset so same file can be re-selected
       }
     });
   }

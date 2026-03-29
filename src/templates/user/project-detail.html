@@ -108,32 +108,38 @@
 
     <!-- KB Tab -->
     <div class="tab-c" id="tab-kb">
-      <div class="kb-folder">
-        <div class="kb-folder-hdr">
-          <div class="flex items-c gap-3">
-            <span style="font-size:18px">📚</span>
-            <div>
-              <div class="text-sm fw-sb" data-bind="kbFolderName"></div>
-              <div class="text-xs text-t" data-bind="kbFolderMeta"></div>
-            </div>
-            <span class="kb-folder-tag" data-bind="kbFolderTag"></span>
-          </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <div class="text-sm text-t" data-bind="kbDocCount"></div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input type="file" accept=".pdf,.md" data-bind="kbFileInput" style="display:none">
+          <button class="btn btn-p btn-sm" data-action="kbUpload">📤 Upload Document</button>
         </div>
-        <table style="width:100%;border-collapse:collapse">
-          <thead>
-            <tr>
-              <th style="text-align:left;font-size:11px;font-weight:500;color:var(--gray-500);text-transform:uppercase;letter-spacing:.05em;padding:10px 20px;border-bottom:1px solid var(--gray-100);background:var(--gray-25)">Document</th>
-              <th style="text-align:left;font-size:11px;font-weight:500;color:var(--gray-500);text-transform:uppercase;padding:10px 20px;border-bottom:1px solid var(--gray-100);background:var(--gray-25)">Size</th>
-              <th style="text-align:left;font-size:11px;font-weight:500;color:var(--gray-500);text-transform:uppercase;padding:10px 20px;border-bottom:1px solid var(--gray-100);background:var(--gray-25)">Status</th>
-              <th style="text-align:left;font-size:11px;font-weight:500;color:var(--gray-500);text-transform:uppercase;padding:10px 20px;border-bottom:1px solid var(--gray-100);background:var(--gray-25)">Uploaded</th>
-            </tr>
-          </thead>
-          <tbody data-bind="kbDocsBody"></tbody>
-        </table>
       </div>
-      <div class="card" style="background:var(--gray-25);border-color:var(--gray-100)">
-        <div class="card-body" style="padding:14px 20px">
-          <div class="text-xs text-t">📌 These are the reference documents your agent uses to answer questions during sessions. Contact your admin to add or update documents.</div>
+      <div data-bind="kbUploadStatus" style="display:none"></div>
+      <div data-bind="kbLoading">
+        <div class="loading"><div class="loading-spinner"></div><div class="loading-text">Loading documents...</div></div>
+      </div>
+      <div data-bind="kbContent" style="display:none">
+        <div class="tbl-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Document</th>
+                <th>Description</th>
+                <th>Status</th>
+                <th>Uploaded</th>
+                <th style="text-align:right">Action</th>
+              </tr>
+            </thead>
+            <tbody data-bind="kbDocsBody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div data-bind="kbEmpty" style="display:none">
+        <div class="empty">
+          <div class="empty-icon">📚</div>
+          <div class="empty-title">No documents yet</div>
+          <div class="empty-desc">Upload PDF or Markdown files for the AI agent to reference during meetings</div>
         </div>
       </div>
     </div>

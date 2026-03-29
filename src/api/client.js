@@ -1,7 +1,6 @@
-const BASE_URL = 'https://16yaxj3nbd.execute-api.ap-southeast-1.amazonaws.com/dev';
+import { API_BASE_URL, USE_MOCK } from '../config.js';
 
-// Set to true to use mock data (for testing without backend)
-const USE_MOCK = false;
+const BASE_URL = API_BASE_URL;
 
 class ApiClient {
   constructor() {
