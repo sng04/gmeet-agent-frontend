@@ -3,6 +3,7 @@ import { Button } from '../../components/ui/Button.js';
 import { SearchBox } from '../../components/ui/Form.js';
 import { navigate } from '../../router.js';
 import { projectsApi } from '../../api/projects.js';
+import { sessionsApi } from '../../api/sessions.js';
 import { botCredentialApi } from '../../api/botCredential.js';
 
 export default async function ProjectsController() {
@@ -50,6 +51,20 @@ export default async function ProjectsController() {
       credentials.forEach(c => {
         credentialMap[c.credential_id] = c.email;
       });
+
+      // Fetch session and user counts per project
+      await Promise.all(projects.map(async (p) => {
+        try {
+          const sessRes = await sessionsApi.listByProject(p.project_id);
+          const items = sessRes.data?.items || [];
+          p._sessionCount = items.length;
+        } catch { p._sessionCount = 0; }
+        try {
+          const usersRes = await projectsApi.getUsers(p.project_id);
+          const users = usersRes.data?.users || usersRes.data?.items || [];
+          p._userCount = Array.isArray(users) ? users.length : 0;
+        } catch { p._userCount = 0; }
+      }));
 
       renderProjects();
     } catch (err) {
@@ -127,8 +142,8 @@ export default async function ProjectsController() {
           ? `<span class="mono text-sm">${gmailEmail}</span>` 
           : '<span class="badge b-warn">Not assigned</span>'
         }</td>
-        <td>${project.total_users ?? 0}</td>
-        <td>${project.total_sessions ?? 0}</td>
+        <td>${project._userCount ?? project.assigned_users?.length ?? project.total_users ?? 0}</td>
+        <td>${project._sessionCount ?? project.total_sessions ?? 0}</td>
         <td>
           <button class="btn btn-g btn-sm" data-action="open" data-id="${project.project_id}">Open →</button>
         </td>

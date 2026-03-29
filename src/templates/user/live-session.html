@@ -68,9 +68,21 @@
             </div>
             <div class="tab-c" id="tab-live-transcript">
               <div class="card">
-                <div class="card-hdr"><div class="text-md fw-sb">Live Transcript</div><div class="text-xs text-t">Speech-to-text · auto-scroll</div></div>
-                <div class="card-body" style="max-height:500px;overflow-y:auto">
-                  <div class="tscript" data-bind="liveTranscript"></div>
+                <div class="card-hdr">
+                  <div class="text-md fw-sb">Live Transcript</div>
+                  <div style="display:flex;align-items:center;gap:10px">
+                    <span class="transcript-live-badge" data-bind="transcriptLiveBadge" style="display:none"><span class="live-dot-sm"></span> LIVE</span>
+                    <div class="text-xs text-t">Speech-to-text · auto-scroll</div>
+                  </div>
+                </div>
+                <div class="card-body transcript-scroll-container" data-bind="transcriptContainer" style="max-height:500px;overflow-y:auto">
+                  <div class="tscript" data-bind="liveTranscript">
+                    <div class="empty" data-bind="transcriptEmpty">
+                      <div class="empty-icon">📝</div>
+                      <div class="empty-title">No transcript yet</div>
+                      <div class="empty-desc">Transcript will appear here when the meeting starts</div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -91,9 +103,15 @@
             </div>
             <div class="tab-c" id="tab-retro-transcript">
               <div class="card">
-                <div class="card-hdr"><div class="text-md fw-sb">Full Transcript</div><div class="text-xs text-t">Raw speech-to-text output · <span data-bind="retroTranscriptCount"></span> entries</div></div>
-                <div class="card-body">
-                  <div class="tscript" data-bind="retroTranscript"></div>
+                <div class="card-hdr"><div class="text-md fw-sb">Full Transcript</div><div class="text-xs text-t">Raw speech-to-text output · <span data-bind="retroTranscriptCount">0</span> entries</div></div>
+                <div class="card-body" style="max-height:500px;overflow-y:auto">
+                  <div class="tscript" data-bind="retroTranscript">
+                    <div class="empty">
+                      <div class="empty-icon">📝</div>
+                      <div class="empty-title">No transcript available</div>
+                      <div class="empty-desc">Transcript will be available after the meeting</div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

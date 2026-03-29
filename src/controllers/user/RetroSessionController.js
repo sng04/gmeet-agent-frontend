@@ -4,22 +4,35 @@ import { sessionsApi } from '../../api/sessions.js';
 import { projectsApi } from '../../api/projects.js';
 import { formatDate } from '../../utils/format.js';
 
-// Bot status to UI status mapping
+const SPEAKER_COLORS = [
+  '#3B82F6', '#10B981', '#F59E0B', '#EF4444',
+  '#8B5CF6', '#EC4899', '#06B6D4', '#F97316',
+];
+
+function getSpeakerColor(speaker) {
+  const idx = parseInt(speaker?.replace('spk_', ''), 10) || 0;
+  return SPEAKER_COLORS[idx % SPEAKER_COLORS.length];
+}
+
+function formatSpeaker(speaker) {
+  const idx = parseInt(speaker?.replace('spk_', ''), 10) || 0;
+  return 'Speaker ' + (idx + 1);
+}
+
+function formatTimestamp(isoString) {
+  return new Date(isoString).toLocaleTimeString('en-US', {
+    hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
+  });
+}
+
 function getUIStatus(botStatus) {
-  const statusMap = {
-    'none': 'none',
-    'pending': 'starting',
-    'queued': 'starting',
-    'starting': 'starting',
-    'joining': 'starting',
-    'in_meeting': 'live',
-    'running': 'live',
-    'stopping': 'stopping',
-    'stopped': 'stopping',
-    'completed': 'finished',
-    'failed': 'failed',
+  const map = {
+    'none': 'none', 'pending': 'starting', 'queued': 'starting',
+    'starting': 'starting', 'joining': 'starting', 'in_meeting': 'live',
+    'running': 'live', 'stopping': 'stopping', 'stopped': 'stopping',
+    'completed': 'finished', 'failed': 'failed',
   };
-  return statusMap[botStatus] || botStatus;
+  return map[botStatus] || botStatus;
 }
 
 function getStatusBadge(uiStatus) {
@@ -46,7 +59,7 @@ function calculateDuration(startTime, endTime) {
   return mins > 0 ? hours + 'h ' + mins + 'm' : hours + 'h';
 }
 
-// Mock Q&A and transcript data
+// Mock Q&A data (will be replaced with real API later)
 const mockQA = [
   {
     question: 'What kind of encryption do you use for data at rest?',
@@ -56,11 +69,6 @@ const mockQA = [
     time: '09:05:32',
     author: 'Client'
   },
-];
-
-const mockTranscript = [
-  { time: '09:00:15', author: 'Host', text: 'Welcome everyone, thanks for joining.' },
-  { time: '09:05:32', author: 'Client', text: 'What kind of encryption do you use?', isQuestion: true },
 ];
 
 export default async function RetroSessionController(params) {
@@ -82,6 +90,27 @@ export default async function RetroSessionController(params) {
 
   let session = null;
   let project = null;
+
+  // ─── Historical transcript fetch ───
+
+  async function fetchAllTranscripts(sid) {
+    let allItems = [];
+    let lastKey = null;
+    do {
+      const params = { limit: 100 };
+      if (lastKey) params.lastKey = lastKey;
+      try {
+        const res = await sessionsApi.getTranscripts(sid, params);
+        const items = res.data?.items || [];
+        allItems = [...allItems, ...items];
+        lastKey = res.data?.lastKey || null;
+      } catch (err) {
+        console.error('Failed to fetch transcripts:', err);
+        break;
+      }
+    } while (lastKey);
+    return allItems;
+  }
 
   async function loadSession() {
     try {
@@ -119,13 +148,13 @@ export default async function RetroSessionController(params) {
 
     el.querySelector('[data-bind="metaProject"]').textContent = projectName;
     el.querySelector('[data-bind="metaQA"]').textContent = '—';
-    el.querySelector('[data-bind="metaStarted"]').textContent = session.start_time 
-      ? formatDate(session.start_time, { hour: '2-digit', minute: '2-digit' }) 
+    el.querySelector('[data-bind="metaStarted"]').textContent = session.start_time
+      ? formatDate(session.start_time, { hour: '2-digit', minute: '2-digit' })
       : '—';
-    el.querySelector('[data-bind="metaEnded"]').textContent = session.end_time 
-      ? formatDate(session.end_time, { hour: '2-digit', minute: '2-digit' }) 
+    el.querySelector('[data-bind="metaEnded"]').textContent = session.end_time
+      ? formatDate(session.end_time, { hour: '2-digit', minute: '2-digit' })
       : '—';
-    
+
     const meetLinkEl = el.querySelector('[data-bind="metaMeetLink"]');
     if (session.meeting_link) {
       meetLinkEl.href = session.meeting_link;
@@ -134,7 +163,7 @@ export default async function RetroSessionController(params) {
       meetLinkEl.textContent = '—';
       meetLinkEl.removeAttribute('href');
     }
-    
+
     const duration = calculateDuration(session.start_time, session.end_time);
     el.querySelector('[data-bind="metaDuration"]').textContent = session.start_time ? duration : '—';
     el.querySelector('[data-bind="metaScore"]').textContent = '—';
@@ -151,18 +180,36 @@ export default async function RetroSessionController(params) {
 
   function renderQAList() {
     const qaList = el.querySelector('[data-bind="qaList"]');
-    qaList.innerHTML = mockQA.length > 0 
+    qaList.innerHTML = mockQA.length > 0
       ? mockQA.map(qa => '<div class="qa"><div class="flex jc-b items-s mb-4"><div class="text-xs text-t mono">' + qa.time + '</div><span class="badge ' + (qa.confidence >= 90 ? 'b-ok' : 'b-warn') + '">' + qa.confidence + '%</span></div><div class="qa-q"><div class="qi">Q</div><div class="qa-txt q"><span class="qna-author client" style="font-size:10px;margin-right:6px">' + qa.author + '</span>' + qa.question + '</div></div><div class="qa-a mt-2"><div class="ai">A</div><div class="qa-txt">' + qa.hostAnswer + '</div></div><div class="qa-a mt-2"><div class="ai" style="background:var(--gray-100);color:var(--gray-600)">AI</div><div class="qa-txt" style="color:var(--gray-500)">' + qa.aiAnswer + '</div></div></div>').join('')
       : '<div class="empty"><div class="empty-icon">💬</div><div class="empty-title">No Q&A pairs</div><div class="empty-desc">No questions were detected</div></div>';
-    
+
     el.querySelector('[data-bind="qaCountText"]').textContent = mockQA.length + ' Q&A pairs';
   }
 
   function renderTranscript() {
     const transcript = el.querySelector('[data-bind="transcript"]');
-    transcript.innerHTML = mockTranscript.length > 0
-      ? mockTranscript.map(item => '<div class="tscript-item' + (item.isQuestion ? ' question' : '') + '"><div class="ts-author">' + item.author + '</div><div class="ts">' + item.time + '</div>' + item.text + (item.isQuestion ? '<div class="text-xs fw-m mt-1" style="color:var(--warn-600)">⚡ Question detected</div>' : '') + '</div>').join('')
-      : '<div class="text-sm text-t">No transcript available</div>';
+    transcript.innerHTML = '<div class="loading"><div class="loading-spinner"></div><div class="loading-text">Loading transcript...</div></div>';
+
+    fetchAllTranscripts(sessionId).then(items => {
+      const sorted = items.sort(
+        (a, b) => new Date(a.timestamp) - new Date(b.timestamp)
+      );
+
+      if (sorted.length > 0) {
+        transcript.innerHTML = sorted.map(line => {
+          const time = line.timestamp ? formatTimestamp(line.timestamp) : '';
+          return '<div class="tscript-item">'
+            + '<div class="ts">' + time + '</div>'
+            + '<div class="ts-text">' + (line.text || '') + '</div>'
+            + '</div>';
+        }).join('');
+      } else {
+        transcript.innerHTML = '<div class="empty"><div class="empty-icon">📝</div><div class="empty-title">No transcript available</div><div class="empty-desc">No transcript was recorded for this session</div></div>';
+      }
+    }).catch(() => {
+      transcript.innerHTML = '<div class="empty"><div class="empty-icon">⚠️</div><div class="empty-title">Failed to load transcript</div><div class="empty-desc">Please try again later</div></div>';
+    });
   }
 
   function setupEventListeners() {

@@ -171,16 +171,27 @@ export default async function LayoutController() {
 
   // Load live sessions for user portal
   if (!isAdmin) {
-    sessionsApi.list({ limit: 50 }).then(res => {
-      const sessions = res.data?.items || [];
-      const liveSessions = sessions.filter(s => 
-        s.bot_status === 'in_meeting' || s.bot_status === 'running'
-      );
-      renderNav(userMenuBase, liveSessions, false);
-    }).catch(err => {
-      console.warn('Failed to load live sessions:', err);
-      renderNav(userMenuBase, [], false);
-    });
+    const refreshLiveSessions = () => {
+      sessionsApi.list({ limit: 50 }).then(res => {
+        const sessions = res.data?.items || [];
+        const liveSessions = sessions.filter(s => 
+          s.bot_status === 'in_meeting' || s.bot_status === 'running'
+        );
+        renderNav(userMenuBase, liveSessions, false);
+      }).catch(err => {
+        console.warn('Failed to load live sessions:', err);
+        renderNav(userMenuBase, [], false);
+      });
+    };
+    refreshLiveSessions();
+    const liveSessionsPoll = setInterval(refreshLiveSessions, 5000);
+
+    // Store cleanup
+    const prevCleanup = el._cleanup;
+    el._cleanup = () => {
+      clearInterval(liveSessionsPoll);
+      if (prevCleanup) prevCleanup();
+    };
   }
 
   appStore.subscribe((state) => {

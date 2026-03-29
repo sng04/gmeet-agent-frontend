@@ -3,6 +3,7 @@ import { navigate } from '../../router.js';
 import { Button } from '../../components/ui/Button.js';
 import { Alert } from '../../components/ui/Alert.js';
 import { showLoading, hideLoading } from '../../components/ui/Loading.js';
+import { ConfirmDialog } from '../../components/ui/ConfirmDialog.js';
 import { projectsApi } from '../../api/projects.js';
 import { botCredentialApi } from '../../api/botCredential.js';
 
@@ -15,6 +16,8 @@ export default async function ProjectEditController() {
   const pageLoading = el.querySelector('[data-bind="pageLoading"]');
   const pageContent = el.querySelector('[data-bind="pageContent"]');
   const pageError = el.querySelector('[data-bind="pageError"]');
+  const deleteAlert = el.querySelector('[data-bind="deleteAlert"]');
+  const deleteActions = el.querySelector('[data-bind="deleteActions"]');
 
   if (!projectId) {
     pageLoading.style.display = 'none';
@@ -98,6 +101,13 @@ export default async function ProjectEditController() {
       actions.appendChild(Button({ text: 'Cancel', variant: 's', onClick: () => navigate(`projects/${projectId}`) }));
       actions.appendChild(Button({ text: 'Save Changes', variant: 'p', onClick: handleSubmit }));
 
+      // Setup danger zone
+      deleteActions.appendChild(Button({
+        text: 'Delete Project',
+        variant: 'd',
+        onClick: () => handleDelete(project.name)
+      }));
+
     } catch (err) {
       pageLoading.style.display = 'none';
       pageError.style.display = 'block';
@@ -141,6 +151,34 @@ export default async function ProjectEditController() {
       hideLoading();
       alertContainer.appendChild(Alert({ message: err.message || 'Failed to update project', variant: 'err' }));
     }
+  }
+
+  function handleDelete(projectName) {
+    deleteAlert.innerHTML = '';
+    ConfirmDialog({
+      title: 'Delete Project',
+      message: `Are you sure you want to delete "<strong>${projectName}</strong>"? This will permanently delete all sessions, transcripts, and user assignments.`,
+      confirmText: 'Delete Project',
+      confirmingText: 'Deleting...',
+      loadingMessage: 'Deleting project...',
+      onConfirm: () => projectsApi.delete(projectId),
+      onSuccess: () => navigate('projects'),
+      onError: (err) => {
+        if (err.status === 409) {
+          deleteAlert.innerHTML = '';
+          deleteAlert.appendChild(Alert({
+            message: 'Cannot delete project while a meeting is in progress. Please end all active meetings first.',
+            variant: 'warn'
+          }));
+        } else if (err.status === 404) {
+          deleteAlert.innerHTML = '';
+          deleteAlert.appendChild(Alert({ message: 'Project not found', variant: 'err' }));
+        } else {
+          deleteAlert.innerHTML = '';
+          deleteAlert.appendChild(Alert({ message: err.message || 'Failed to delete project', variant: 'err' }));
+        }
+      }
+    });
   }
 
   loadProject();

@@ -56,6 +56,11 @@ export default async function DashboardController(params) {
   let sessions = [];
   let users = [];
   let projectMap = {};
+  let sessionPollInterval = null;
+
+  el._cleanup = () => {
+    if (sessionPollInterval) { clearInterval(sessionPollInterval); sessionPollInterval = null; }
+  };
 
   async function loadData() {
     try {
@@ -68,6 +73,7 @@ export default async function DashboardController(params) {
 
       projects = projectsRes.data?.items || [];
       sessions = sessionsRes.data?.items || [];
+      sessions.sort((a, b) => new Date(b.created_at || b.start_time || 0) - new Date(a.created_at || a.start_time || 0));
       users = usersRes.data?.items || usersRes.data?.users || [];
       if (!Array.isArray(users)) users = [];
 
@@ -90,6 +96,25 @@ export default async function DashboardController(params) {
       renderStats(activeSessions, totalSessions, totalProjects, totalUsers);
       renderSessionsTable();
       renderQATable();
+
+      // Poll sessions for status changes
+      sessionPollInterval = setInterval(async () => {
+        try {
+          const res = await sessionsApi.list({ limit: 50 });
+          const updated = res.data?.items || [];
+          updated.sort((a, b) => new Date(b.created_at || b.start_time || 0) - new Date(a.created_at || a.start_time || 0));
+          const changed = updated.some((u, i) => {
+            const old = sessions[i];
+            return !old || u.bot_status !== old.bot_status;
+          }) || updated.length !== sessions.length;
+          if (changed) {
+            sessions = updated;
+            renderSessionsTable();
+            const active = sessions.filter(s => getUIStatus(s.bot_status) === 'live').length;
+            renderStats(active, sessions.length, projects.length, users.length);
+          }
+        } catch (err) { /* ignore */ }
+      }, 5000);
     } catch (err) {
       console.error('Failed to load dashboard data:', err);
       pageLoading.style.display = 'none';
@@ -116,7 +141,7 @@ export default async function DashboardController(params) {
 
     const sessionsTable = Table({
       title: 'Recent Sessions',
-      actions: Button({ text: 'View All →', variant: 'g', size: 'sm', onClick: () => navigate('sessions') }).outerHTML,
+      actions: '<button class="btn btn-g btn-sm" data-action="viewAllSessions">View All →</button>',
       columns: [
         { label: 'Session', render: r => {
           const startTimeDisplay = r.start_time ? formatDate(r.start_time, { hour: '2-digit', minute: '2-digit' }) : '—';
@@ -146,7 +171,7 @@ export default async function DashboardController(params) {
   function renderQATable() {
     const qaTable = Table({
       title: 'Recent Q&A Pairs',
-      actions: Button({ text: 'View All →', variant: 'g', size: 'sm', onClick: () => navigate('qa') }).outerHTML,
+      actions: '<button class="btn btn-g btn-sm" data-action="viewAllQA">View All →</button>',
       columns: [
         { label: 'Question', render: r => '<strong style="max-width:220px" class="truncate">' + r.question + '</strong>', width: '25%' },
         { label: 'Answer', render: r => '<span style="max-width:280px" class="truncate">' + r.answer + '</span>', width: '30%' },
@@ -161,6 +186,15 @@ export default async function DashboardController(params) {
   }
 
   loadData();
+
+  // Handle action clicks
+  el.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-action]');
+    if (!btn) return;
+    const action = btn.dataset.action;
+    if (action === 'viewAllSessions') navigate('sessions');
+    if (action === 'viewAllQA') navigate('qa');
+  });
 
   return el;
 }

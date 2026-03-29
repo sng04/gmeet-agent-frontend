@@ -59,7 +59,12 @@ export default async function DashboardController() {
 
   let projects = [];
   let sessions = [];
-  let projectMap = {}; // { project_id: project_name }
+  let projectMap = {};
+  let sessionPollInterval = null;
+
+  el._cleanup = () => {
+    if (sessionPollInterval) { clearInterval(sessionPollInterval); sessionPollInterval = null; }
+  };
 
   async function loadData() {
     try {
@@ -76,6 +81,7 @@ export default async function DashboardController() {
       // Load all sessions
       const sessionsRes = await sessionsApi.list({ limit: 50 });
       sessions = sessionsRes.data?.items || [];
+      sessions.sort((a, b) => new Date(b.created_at || b.start_time || 0) - new Date(a.created_at || a.start_time || 0));
 
       // Hide loading, show content
       pageLoading.style.display = 'none';
@@ -90,6 +96,34 @@ export default async function DashboardController() {
       renderProjects();
       renderSessions();
       updateLiveWidget();
+
+      // Fetch session counts per project (async, update cards when ready)
+      Promise.all(projects.map(async (p) => {
+        try {
+          const sessRes = await sessionsApi.listByProject(p.project_id);
+          p._sessionCount = sessRes.data?.items?.length ?? 0;
+        } catch { p._sessionCount = 0; }
+      })).then(() => renderProjects());
+
+      // Poll sessions for status changes
+      sessionPollInterval = setInterval(async () => {
+        try {
+          const res = await sessionsApi.list({ limit: 50 });
+          const updated = res.data?.items || [];
+          updated.sort((a, b) => new Date(b.created_at || b.start_time || 0) - new Date(a.created_at || a.start_time || 0));
+          const changed = updated.some((u, i) => {
+            const old = sessions[i];
+            return !old || u.bot_status !== old.bot_status;
+          }) || updated.length !== sessions.length;
+          if (changed) {
+            sessions = updated;
+            renderSessions();
+            updateLiveWidget();
+            const active = sessions.filter(s => getUIStatus(s.bot_status) === 'live').length;
+            renderStats(active, sessions.length, projects.length);
+          }
+        } catch (err) { /* ignore */ }
+      }, 5000);
     } catch (err) {
       pageLoading.style.display = 'none';
       pageError.style.display = 'block';
@@ -142,9 +176,10 @@ export default async function DashboardController() {
     }
 
     projects.forEach(p => {
+      const sessionCount = p._sessionCount ?? sessions.filter(s => s.project_id === p.project_id).length;
       const card = document.createElement('div');
       card.className = 'proj-card';
-      card.innerHTML = '<div class="proj-card-name">' + (p.name || 'Untitled') + '</div><div class="proj-card-desc">' + (p.description || 'No description') + '</div><div class="proj-card-meta"><span>🤖 ' + (p.agent_id ? 'Agent assigned' : '—') + '</span><span>📋 ' + (p.total_sessions ?? 0) + ' sessions</span><span>👥 ' + (p.total_users ?? 0) + ' users</span></div>';
+      card.innerHTML = '<div class="proj-card-name">' + (p.name || 'Untitled') + '</div><div class="proj-card-desc">' + (p.description || 'No description') + '</div><div class="proj-card-meta"><span>🤖 ' + (p.agent_id ? 'Agent assigned' : '—') + '</span><span>📋 ' + sessionCount + ' sessions</span></div>';
       card.addEventListener('click', () => navigate('project/' + p.project_id));
       projectsGrid.appendChild(card);
     });
