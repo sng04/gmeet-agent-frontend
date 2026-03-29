@@ -8,18 +8,13 @@ class ApiClient {
   }
 
   async request(endpoint, options = {}) {
+    // Don't send auth header for login/public endpoints
+    const isPublicEndpoint = endpoint.startsWith('/auth/') && !endpoint.includes('/logout');
     const headers = {
       'Content-Type': 'application/json',
-      ...(this.token && { Authorization: `Bearer ${this.token}` }),
+      ...(!isPublicEndpoint && this.token && { Authorization: `Bearer ${this.token}` }),
       ...options.headers,
     };
-
-    console.log('API Request:', {
-      url: `${BASE_URL}${endpoint}`,
-      method: options.method || 'GET',
-      hasToken: !!this.token,
-      tokenPreview: this.token ? this.token.substring(0, 20) + '...' : null
-    });
 
     try {
       const res = await fetch(`${BASE_URL}${endpoint}`, {
@@ -40,7 +35,11 @@ class ApiClient {
         localStorage.removeItem('access_token');
         localStorage.removeItem('id_token');
         localStorage.removeItem('refresh_token');
-        window.location.hash = '#/login';
+        localStorage.removeItem('user_role');
+        localStorage.removeItem('user_info');
+        // Use History API navigation (not hash)
+        window.history.pushState({}, '', '/login');
+        window.dispatchEvent(new PopStateEvent('popstate'));
         throw new Error(data?.message || 'Unauthorized');
       }
 
@@ -50,7 +49,6 @@ class ApiClient {
 
       return data;
     } catch (err) {
-      // If CORS error or network error, throw with better message
       if (err.message === 'Failed to fetch') {
         throw new Error('Network error - API may have CORS issues or is unreachable');
       }
