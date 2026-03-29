@@ -179,7 +179,8 @@ export default async function DashboardController() {
       const sessionCount = p._sessionCount ?? sessions.filter(s => s.project_id === p.project_id).length;
       const card = document.createElement('div');
       card.className = 'proj-card';
-      card.innerHTML = '<div class="proj-card-name">' + (p.name || 'Untitled') + '</div><div class="proj-card-desc">' + (p.description || 'No description') + '</div><div class="proj-card-meta"><span>🤖 ' + (p.agent_id ? 'Agent assigned' : '—') + '</span><span>📋 ' + sessionCount + ' sessions</span></div>';
+      const agentName = p.agent_name || '—';
+      card.innerHTML = '<div class="proj-card-name">' + (p.name || 'Untitled') + '</div><div class="proj-card-desc">' + (p.description || 'No description') + '</div><div class="proj-card-meta"><span>🤖 ' + agentName + '</span><span>📋 ' + sessionCount + ' sessions</span></div>';
       card.addEventListener('click', () => navigate('project/' + p.project_id));
       projectsGrid.appendChild(card);
     });

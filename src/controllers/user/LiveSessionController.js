@@ -503,10 +503,6 @@ export default async function LiveSessionController() {
     navigate('session/' + sessionId);
   }
 
-    // Refresh retro transcript
-    renderRetroTranscript();
-  }
-
   function handleErrorMessage(data) {
     // Remove loading overlay if present
     const overlay = document.getElementById('summary-loading-overlay');

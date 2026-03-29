@@ -9,7 +9,6 @@ import { sessionsApi } from '../../api/sessions.js';
 import { botCredentialApi } from '../../api/botCredential.js';
 import { usersApi } from '../../api/users.js';
 import { kbDocumentsApi } from '../../api/kbDocuments.js';
-import { agentsApi } from '../../api/agents.js';
 import { formatDate } from '../../utils/format.js';
 
 // Bot status to UI status mapping
@@ -159,22 +158,10 @@ export default async function ProjectDetailController(params) {
     el.querySelector('[data-bind="description"]').textContent = project.description || 'No description';
 
     // Stats
-    el.querySelector('[data-bind="statAgent"]').textContent = 'Loading...';
+    el.querySelector('[data-bind="statAgent"]').textContent = project.agent_name || 'Not assigned';
     el.querySelector('[data-bind="statGmail"]').textContent = credentialEmail || 'Not assigned';
     el.querySelector('[data-bind="statUsers"]').textContent = project.total_users ?? 0;
     el.querySelector('[data-bind="statSessions"]').textContent = project.total_sessions ?? 0;
-
-    // Fetch agent name
-    if (project.agent_id) {
-      try {
-        const agentRes = await agentsApi.get(project.agent_id);
-        el.querySelector('[data-bind="statAgent"]').textContent = agentRes.data?.agent_name || 'Unknown';
-      } catch (err) {
-        el.querySelector('[data-bind="statAgent"]').textContent = 'Not found';
-      }
-    } else {
-      el.querySelector('[data-bind="statAgent"]').textContent = 'Not assigned';
-    }
 
     // KB
     el.querySelector('[data-bind="kbMeta"]').textContent = 'Loading documents...';

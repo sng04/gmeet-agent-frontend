@@ -4,7 +4,6 @@ import { navigate } from '../../router.js';
 import { projectsApi } from '../../api/projects.js';
 import { sessionsApi } from '../../api/sessions.js';
 import { kbDocumentsApi } from '../../api/kbDocuments.js';
-import { agentsApi } from '../../api/agents.js';
 import { formatDate } from '../../utils/format.js';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog.js';
 
@@ -205,21 +204,10 @@ export default async function ProjectDetailController(params) {
     el.querySelector('[data-bind="description"]').textContent = project.description || 'No description';
 
     // Stats
-    el.querySelector('[data-bind="statAgent"]').textContent = 'Loading...';
     el.querySelector('[data-bind="statSessions"]').textContent = project.total_sessions ?? 0;
     el.querySelector('[data-bind="statQA"]').textContent = '—';
 
-    // Fetch agent name
-    if (project.agent_id) {
-      try {
-        const agentRes = await agentsApi.get(project.agent_id);
-        el.querySelector('[data-bind="statAgent"]').textContent = agentRes.data?.agent_name || 'Unknown';
-      } catch (err) {
-        el.querySelector('[data-bind="statAgent"]').textContent = 'Not found';
-      }
-    } else {
-      el.querySelector('[data-bind="statAgent"]').textContent = '—';
-    }
+    el.querySelector('[data-bind="statAgent"]').textContent = project.agent_name || '—';
     el.querySelector('[data-bind="qaTotalVal"]').textContent = '—';
 
     // KB

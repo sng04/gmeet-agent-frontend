@@ -25,7 +25,7 @@ export default async function ProjectsController() {
   }));
 
   let projects = [];
-  let credentialMap = {}; // { credential_id: email }
+  let credentialMap = {};
 
   async function loadData() {
     const tableContainer = el.querySelector('[data-bind="table"]');
@@ -37,7 +37,7 @@ export default async function ProjectsController() {
     `;
 
     try {
-      // Fetch projects and credentials in parallel
+      // Fetch projects, credentials, and agents in parallel
       const [projectsRes, credentialsRes] = await Promise.all([
         projectsApi.list(),
         botCredentialApi.list()
@@ -45,7 +45,6 @@ export default async function ProjectsController() {
 
       projects = projectsRes.data?.items || [];
       
-      // Build credential lookup map
       const credentials = credentialsRes.data?.items || [];
       credentialMap = {};
       credentials.forEach(c => {
@@ -137,7 +136,7 @@ export default async function ProjectsController() {
           <strong class="text-p">${project.name || '—'}</strong>
           ${project.description ? `<div class="text-xs text-t mt-1">${project.description}</div>` : ''}
         </td>
-        <td>${project.agent_id ? '<span class="text-t">—</span>' : '<span class="text-t">—</span>'}</td>
+        <td>${project.agent_name ? '<span class="text-sm">' + project.agent_name + '</span>' : '<span class="text-t">Not assigned</span>'}</td>
         <td>${gmailEmail 
           ? `<span class="mono text-sm">${gmailEmail}</span>` 
           : '<span class="badge b-warn">Not assigned</span>'
