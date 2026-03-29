@@ -39,6 +39,10 @@ export default async function SkillsController() {
     }
   }
 
+  function getFileName(s) {
+    return s.file_name || s.fileName || s.document_name || s.filename || s.s3_key?.split('/').pop() || '—';
+  }
+
   function render(skills) {
     listEl.innerHTML = '';
     if (!skills.length) {
@@ -46,20 +50,23 @@ export default async function SkillsController() {
       return;
     }
     skills.forEach(function(s) {
+      var fname = getFileName(s);
       var card = document.createElement('div');
       card.className = 'card mb-4';
       card.innerHTML =
         '<div class="card-hdr">' +
-          '<div><div class="text-md fw-sb">' + s.skill_name + '</div>' +
-          (s.description ? '<div class="text-xs text-t mt-1">' + s.description + '</div>' : '') + '</div>' +
+          '<div>' +
+            '<div class="text-md fw-sb">' + s.skill_name + '</div>' +
+            '<div class="mono text-xs" style="color:var(--pri-600);margin-top:4px">📄 ' + fname + '</div>' +
+            (s.description ? '<div class="text-xs text-t mt-1">' + s.description + '</div>' : '') +
+          '</div>' +
           '<div class="flex gap-2">' +
             '<button class="btn btn-g btn-sm" data-edit-skill="' + s.skill_id + '">Edit</button>' +
             '<button class="btn btn-d btn-sm" data-delete-skill="' + s.skill_id + '">Delete</button>' +
           '</div>' +
         '</div>' +
         '<div class="card-body" style="padding:10px 20px;font-size:12px;color:var(--gray-500)">' +
-          '<span class="mono">' + (s.file_name || '—') + '</span>' +
-          (s.created_at ? ' · Created ' + formatDate(s.created_at) : '') +
+          (s.created_at ? 'Created ' + formatDate(s.created_at) : '') +
         '</div>';
       listEl.appendChild(card);
     });
@@ -68,7 +75,7 @@ export default async function SkillsController() {
   searchBox.querySelector('input').addEventListener('input', function() {
     var q = searchBox.querySelector('input').value.toLowerCase();
     render(allSkills.filter(function(s) {
-      return (s.skill_name || '').toLowerCase().includes(q) || (s.file_name || '').toLowerCase().includes(q);
+      return (s.skill_name || '').toLowerCase().includes(q) || getFileName(s).toLowerCase().includes(q);
     }));
   });
 
@@ -96,9 +103,12 @@ export default async function SkillsController() {
         '<div class="form-g"><label class="form-l">Description</label>' +
         '<textarea class="form-ta" name="description" rows="3">' + (skill.description || '') + '</textarea></div>' +
         '<div class="form-g"><label class="form-l">Replace Document <span style="font-weight:400;color:var(--gray-400)">(optional)</span></label>' +
-        '<div class="text-xs text-t mb-2">Current: <span class="mono">' + (skill.file_name || '—') + '</span></div>' +
+        '<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--gray-50);border:1px solid var(--gray-200);border-radius:8px;margin-bottom:8px">' +
+          '<span style="font-size:16px">📄</span>' +
+          '<div style="flex:1"><div class="text-sm fw-m">' + getFileName(skill) + '</div><div class="text-xs text-t">Current document</div></div>' +
+        '</div>' +
         '<input type="file" id="edit-skill-file" accept=".pdf,.md,.markdown,.txt" class="form-i">' +
-        '<div class="form-h">Leave empty to keep the current document. Selecting a new file will replace it.</div></div>' +
+        '<div class="form-h">Select a new file to replace the current document.</div></div>' +
         '<div id="edit-skill-error" style="display:none;color:var(--err-600);font-size:13px;margin-top:8px"></div>' +
       '</form>';
     var footer = document.createElement('div');
