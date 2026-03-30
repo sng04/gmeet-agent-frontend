@@ -32,7 +32,7 @@ export default async function UserLoginController() {
   // Footer link
   footerLink.addEventListener('click', (e) => {
     e.preventDefault();
-    navigate('admin/login');
+    navigate('login/admin');
   });
 
   // Form submit
@@ -61,7 +61,7 @@ export default async function UserLoginController() {
           response.data.session,
           response.data.username || username
         );
-        navigate('change-password');
+        navigate('login/user/change-password');
       } else if (response.data?.access_token) {
         const payload = decodeJwt(response.data.access_token);
         console.log('JWT payload:', payload);

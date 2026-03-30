@@ -103,6 +103,7 @@ export default async function LiveSessionController() {
   let durationInterval = null;
   let statusPollInterval = null;
   let transcriptPollInterval = null;
+  let qaPollInterval = null;
 
   // Transcript state
   let transcriptLines = [];   // Final lines
@@ -228,8 +229,10 @@ export default async function LiveSessionController() {
         consecutiveCloses = 0;
         connectionState = 'connected';
         updateConnectionUI();
-        // Auto-trigger gap analysis and send suggested questions on connect
+        // Auto-trigger gap analysis and send suggested questions on first connect
         autoTriggerOnConnect();
+        // Re-fetch QA pairs on reconnect to catch any missed during disconnect
+        refreshQAPairsFromREST();
       },
       onClose: () => {
         consecutiveCloses++;
@@ -367,13 +370,20 @@ export default async function LiveSessionController() {
   // ─── Q&A event handlers ───
 
   function handleQuestionDetected(data) {
-    qaCards.push({
+    // Avoid duplicates
+    const exists = qaCards.find(c => c.question === data.question);
+    if (exists) return;
+    qaCards.unshift({
       question: data.question,
       aiAnswer: null,
       participantAnswer: null,
+      speaker: data.speaker || null,
+      speakerRole: data.speaker_role || null,
+      detectionMethod: data.detection_method || null,
       status: 'detecting',
-      timestamp: data.timestamp || new Date().toISOString(),
+      timestamp: data.detected_at || data.timestamp || new Date().toISOString(),
     });
+    updateQACount();
     renderQAList();
   }
 
@@ -381,18 +391,30 @@ export default async function LiveSessionController() {
     const card = qaCards.find(c => c.question === data.question);
     if (card) {
       card.aiAnswer = data.suggested_answer;
-      if (card.status === 'detecting') card.status = 'answered';
+      if (card.status === 'detecting') card.status = 'suggested';
       renderQAList();
     }
   }
 
   function handleQAPairAutoSaved(data) {
-    const card = qaCards.find(c => c.question === data.question);
+    let card = qaCards.find(c => c.question === data.question);
     if (card) {
       card.participantAnswer = data.answer;
-      card.status = 'saved';
-      renderQAList();
+      card.source = data.source || 'participant';
+      card.status = 'answered';
+    } else {
+      // QA pair arrived without a prior questionDetected (e.g. page loaded mid-session)
+      qaCards.unshift({
+        question: data.question || '',
+        aiAnswer: null,
+        participantAnswer: data.answer || '',
+        source: data.source || 'participant',
+        status: 'answered',
+        timestamp: new Date().toISOString(),
+      });
     }
+    updateQACount();
+    renderQAList();
   }
 
   function handleQuestionUnanswered(data) {
@@ -400,6 +422,39 @@ export default async function LiveSessionController() {
     if (card) {
       card.status = 'unanswered';
       renderQAList();
+    }
+  }
+
+  function updateQACount() {
+    const countEl = el.querySelector('[data-bind="metaQA"]');
+    if (countEl) countEl.textContent = qaCards.length || '—';
+  }
+
+  async function refreshQAPairsFromREST() {
+    try {
+      const qaRes = await qaPairsApi.listBySession(sessionId);
+      const pairs = qaRes.data?.items || qaRes.data || [];
+      if (!Array.isArray(pairs)) return;
+      let added = false;
+      for (const qa of pairs) {
+        const q = qa.question || '';
+        if (!q || qaCards.find(c => c.question === q)) continue;
+        qaCards.push({
+          question: q,
+          aiAnswer: qa.ai_answer || qa.suggested_answer || null,
+          participantAnswer: qa.host_answer || qa.answer || null,
+          source: qa.source || 'participant',
+          status: 'answered',
+          timestamp: qa.detected_at || qa.timestamp || qa.created_at || new Date().toISOString(),
+        });
+        added = true;
+      }
+      if (added) {
+        updateQACount();
+        renderQAList();
+      }
+    } catch (err) {
+      console.warn('Failed to refresh QA pairs:', err);
     }
   }
 
@@ -652,12 +707,22 @@ export default async function LiveSessionController() {
         console.warn('Transcript poll failed:', err);
       }
     }, 3000);
+    // QA pair fallback poll (every 30s to catch missed WebSocket events)
+    if (!qaPollInterval) {
+      qaPollInterval = setInterval(async () => {
+        try { await refreshQAPairsFromREST(); } catch (err) { console.warn('QA poll failed:', err); }
+      }, 30000);
+    }
   }
 
   function stopTranscriptPolling() {
     if (transcriptPollInterval) {
       clearInterval(transcriptPollInterval);
       transcriptPollInterval = null;
+    }
+    if (qaPollInterval) {
+      clearInterval(qaPollInterval);
+      qaPollInterval = null;
     }
   }
 
@@ -861,8 +926,9 @@ export default async function LiveSessionController() {
 
   function renderQAList() {
     const statusBadges = {
-      detecting: '<span class="badge b-pri">Detecting</span>',
-      answered: '<span class="badge b-ok">Answered</span>',
+      detecting: '<span class="badge b-pri"><span class="dot"></span> Detecting</span>',
+      suggested: '<span class="badge b-ok">AI Suggested</span>',
+      answered: '<span class="badge b-summary">Answered</span>',
       unanswered: '<span class="badge b-warn">Unanswered</span>',
       saved: '<span class="badge b-summary">Saved</span>',
     };
@@ -870,21 +936,37 @@ export default async function LiveSessionController() {
     const renderQAItem = (qa) => {
       const time = qa.timestamp ? formatTimestamp(qa.timestamp) : '--:--';
       const badge = statusBadges[qa.status] || '';
+      const roleLabel = qa.speakerRole === 'client'
+        ? '<span class="qna-author client" style="font-size:10px;margin-right:6px">Client</span>'
+        : qa.speakerRole === 'user'
+        ? '<span class="qna-author" style="font-size:10px;margin-right:6px;background:var(--pri-50);color:var(--pri-600)">You</span>'
+        : '';
+
       let html = '<div class="qa">'
         + '<div class="flex jc-b items-s mb-4">'
         + '<div class="text-xs text-t mono">' + time + '</div>'
         + badge
         + '</div>'
-        + '<div class="qa-q"><div class="qi">Q</div><div class="qa-txt q">' + qa.question + '</div></div>';
+        + '<div class="qa-q"><div class="qi">Q</div><div class="qa-txt q">' + roleLabel + qa.question + '</div></div>';
 
+      // Show participant answer if available
       if (qa.participantAnswer) {
         html += '<div class="qa-a mt-2"><div class="ai">A</div><div class="qa-txt">' + qa.participantAnswer + '</div></div>';
       }
 
+      // Show AI suggested answer
       if (qa.aiAnswer) {
-        html += '<div class="qa-a mt-2"><div class="ai" style="background:var(--gray-100);color:var(--gray-600)">AI</div><div class="qa-txt" style="color:var(--gray-500)">' + qa.aiAnswer + '</div></div>';
-      } else if (qa.status === 'detecting') {
-        html += '<div class="qa-a mt-2"><div class="ai" style="background:var(--gray-100);color:var(--gray-600)">AI</div><div class="qa-txt" style="color:var(--gray-400);font-style:italic">Waiting for answer...</div></div>';
+        html += '<div class="qa-a mt-2" style="border-left:3px solid var(--pri-300);padding-left:10px;margin-left:28px">'
+          + '<div class="text-xs mono fw-m" style="color:var(--pri-500);margin-bottom:2px">💡 AI Suggestion</div>'
+          + '<div class="text-sm" style="color:var(--gray-600);line-height:1.5">' + qa.aiAnswer + '</div>'
+          + '</div>';
+      } else if (qa.status === 'detecting' && qa.speakerRole !== 'user') {
+        html += '<div class="qa-a mt-2"><div class="ai" style="background:var(--gray-100);color:var(--gray-600)">AI</div><div class="qa-txt" style="color:var(--gray-400);font-style:italic">Generating suggestion...</div></div>';
+      }
+
+      // Show unanswered notice
+      if (qa.status === 'unanswered' && !qa.participantAnswer) {
+        html += '<div class="text-xs" style="color:var(--warn-600);margin-top:6px;margin-left:28px">⚠️ No verbal answer was captured for this question</div>';
       }
 
       html += '</div>';

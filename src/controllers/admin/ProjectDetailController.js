@@ -9,6 +9,7 @@ import { sessionsApi } from '../../api/sessions.js';
 import { botCredentialApi } from '../../api/botCredential.js';
 import { usersApi } from '../../api/users.js';
 import { kbDocumentsApi } from '../../api/kbDocuments.js';
+import { filesApi } from '../../api/files.js';
 import { formatDate } from '../../utils/format.js';
 
 // Bot status to UI status mapping
@@ -218,7 +219,7 @@ export default async function ProjectDetailController(params) {
           const border = i < kbDocuments.length - 1 ? 'border-bottom:1px solid var(--gray-100)' : '';
           const uploaded = doc.created_at ? formatDate(doc.created_at) : '—';
           return '<tr>'
-            + '<td style="padding:12px 20px;' + border + '"><div class="flex items-c gap-3">' + getIcon(doc.file_name) + ' <span class="text-sm fw-m text-p">' + (doc.file_name || '—') + '</span></div></td>'
+            + '<td style="padding:12px 20px;' + border + '"><div class="flex items-c gap-3">' + getIcon(doc.file_name) + ' <a href="#" class="text-sm fw-m text-pri" style="text-decoration:none" data-action="kbDownload" data-s3-key="' + (doc.s3_key || '') + '">' + (doc.file_name || '—') + '</a></div></td>'
             + '<td style="padding:12px 20px;font-size:12px;color:var(--gray-500);' + border + '">' + (doc.description || '—') + '</td>'
             + '<td style="padding:12px 20px;' + border + '">' + getStatusBadgeKB(doc.status) + '</td>'
             + '<td style="padding:12px 20px;font-size:12px;' + border + '">' + uploaded + '</td>'
@@ -400,8 +401,20 @@ export default async function ProjectDetailController(params) {
       }
     });
 
-    // KB delete (delegated)
-    el.addEventListener('click', (e) => {
+    // KB download and delete (delegated)
+    el.addEventListener('click', async (e) => {
+      const downloadLink = e.target.closest('[data-action="kbDownload"]');
+      if (downloadLink) {
+        e.preventDefault();
+        const s3Key = downloadLink.dataset.s3Key;
+        if (!s3Key) return;
+        try {
+          const res = await filesApi.getDownloadUrl(s3Key);
+          const url = res.data?.download_url;
+          if (url) window.open(url, '_blank');
+        } catch (err) { alert('Failed to get download link: ' + err.message); }
+        return;
+      }
       const deleteBtn = e.target.closest('[data-action="kbDelete"]');
       if (deleteBtn) {
         handleKbDelete(deleteBtn.dataset.docId);

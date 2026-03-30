@@ -38,7 +38,7 @@ class ApiClient {
         localStorage.removeItem('user_role');
         localStorage.removeItem('user_info');
         // Use History API navigation (not hash)
-        window.history.pushState({}, '', '/login');
+        window.history.pushState({}, '', '/login/user');
         window.dispatchEvent(new PopStateEvent('popstate'));
         throw new Error(data?.message || 'Unauthorized');
       }

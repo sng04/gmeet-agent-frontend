@@ -108,14 +108,9 @@
 
     <!-- KB Tab -->
     <div class="tab-c" id="tab-kb">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <div style="margin-bottom:16px">
         <div class="text-sm text-t" data-bind="kbDocCount"></div>
-        <div style="display:flex;gap:8px;align-items:center">
-          <input type="file" accept=".pdf,.md" data-bind="kbFileInput" style="display:none">
-          <button class="btn btn-p btn-sm" data-action="kbUpload">📤 Upload Document</button>
-        </div>
       </div>
-      <div data-bind="kbUploadStatus" style="display:none"></div>
       <div data-bind="kbLoading">
         <div class="loading"><div class="loading-spinner"></div><div class="loading-text">Loading documents...</div></div>
       </div>
@@ -128,7 +123,6 @@
                 <th>Description</th>
                 <th>Status</th>
                 <th>Uploaded</th>
-                <th style="text-align:right">Action</th>
               </tr>
             </thead>
             <tbody data-bind="kbDocsBody"></tbody>

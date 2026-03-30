@@ -4,8 +4,8 @@ import { navigate } from '../../router.js';
 import { projectsApi } from '../../api/projects.js';
 import { sessionsApi } from '../../api/sessions.js';
 import { kbDocumentsApi } from '../../api/kbDocuments.js';
+import { filesApi } from '../../api/files.js';
 import { formatDate } from '../../utils/format.js';
-import { ConfirmDialog } from '../../components/ui/ConfirmDialog.js';
 
 // Mock data for Q&A (will be replaced later)
 const mockQA = [
@@ -318,11 +318,10 @@ export default async function ProjectDetailController(params) {
     tbody.innerHTML = kbDocuments.map(doc => {
       const uploaded = doc.created_at ? formatDate(doc.created_at) : '—';
       return '<tr>'
-        + '<td><div class="flex items-c gap-3">' + getIcon(doc.file_name) + ' <span class="text-sm fw-m text-p">' + (doc.file_name || '—') + '</span></div></td>'
+        + '<td><div class="flex items-c gap-3">' + getIcon(doc.file_name) + ' <a href="#" class="text-sm fw-m text-pri" style="text-decoration:none" data-action="kbDownload" data-s3-key="' + (doc.s3_key || '') + '">' + (doc.file_name || '—') + '</a></div></td>'
         + '<td class="text-xs text-t">' + (doc.description || '—') + '</td>'
         + '<td>' + getStatusBadgeKB(doc.status) + '</td>'
         + '<td class="text-xs text-t">' + uploaded + '</td>'
-        + '<td style="text-align:right"><button class="btn btn-d btn-sm" data-action="kbDelete" data-doc-id="' + doc.document_id + '">Delete</button></td>'
         + '</tr>';
     }).join('');
   }
@@ -341,66 +340,6 @@ export default async function ProjectDetailController(params) {
       if (kbLoading) kbLoading.style.display = 'none';
       renderKBTab();
     }
-  }
-
-  async function handleKBUpload() {
-    const fileInput = el.querySelector('[data-bind="kbFileInput"]');
-    fileInput.click();
-  }
-
-  async function uploadFile(file) {
-    const statusEl = el.querySelector('[data-bind="kbUploadStatus"]');
-    statusEl.style.display = 'block';
-    statusEl.innerHTML = '<div class="card mb-4" style="border-color:var(--pri-200);background:var(--pri-25)"><div class="card-body" style="padding:10px 16px"><div class="flex items-c gap-3"><div class="loading-spinner" style="width:16px;height:16px;border-width:2px"></div><span class="text-sm">Uploading ' + file.name + '...</span></div></div></div>';
-
-    try {
-      // Step 1: Create document record and get pre-signed URL
-      const res = await kbDocumentsApi.create(projectId, {
-        file_name: file.name,
-        description: '',
-      });
-      const uploadUrl = res.data?.upload_url;
-      const contentType = res.data?.content_type || 'application/octet-stream';
-      if (!uploadUrl) throw new Error('No upload URL returned');
-
-      // Step 2: Upload file to S3 via pre-signed URL
-      const uploadRes = await fetch(uploadUrl, {
-        method: 'PUT',
-        headers: { 'Content-Type': contentType },
-        body: file,
-      });
-      if (!uploadRes.ok) throw new Error('S3 upload failed: ' + uploadRes.status);
-
-      statusEl.innerHTML = '<div class="card mb-4" style="border-color:var(--ok-200);background:var(--ok-50)"><div class="card-body" style="padding:10px 16px"><span class="text-sm" style="color:var(--ok-700)">✅ ' + file.name + ' uploaded successfully</span></div></div>';
-      setTimeout(() => { statusEl.style.display = 'none'; }, 4000);
-
-      // Refresh the list
-      await loadKBDocuments();
-    } catch (err) {
-      statusEl.innerHTML = '<div class="card mb-4" style="border-color:var(--err-200);background:var(--err-50)"><div class="card-body" style="padding:10px 16px"><span class="text-sm" style="color:var(--err-700)">Failed to upload: ' + err.message + '</span></div></div>';
-      setTimeout(() => { statusEl.style.display = 'none'; }, 6000);
-    }
-  }
-
-  async function handleKBDelete(docId) {
-    const doc = kbDocuments.find(d => d.document_id === docId);
-    ConfirmDialog({
-      title: 'Delete Document',
-      message: 'Are you sure you want to delete "' + (doc?.file_name || 'this document') + '"?',
-      warning: 'This will also remove the document from the AI knowledge base.',
-      confirmText: 'Delete',
-      confirmingText: 'Deleting...',
-      loadingMessage: 'Deleting document...',
-      onConfirm: async () => {
-        await kbDocumentsApi.delete(projectId, docId);
-      },
-      onSuccess: () => {
-        loadKBDocuments();
-      },
-      onError: (err) => {
-        alert('Failed to delete: ' + err.message);
-      },
-    });
   }
 
   function setupEventListeners() {
@@ -426,19 +365,21 @@ export default async function ProjectDetailController(params) {
         navigate(`live?sessionId=${sessionId}`);
       } else if (action === 'review') {
         navigate(`session/${sessionId}`);
-      } else if (action === 'kbUpload') {
-        handleKBUpload();
-      } else if (action === 'kbDelete') {
-        handleKBDelete(btn.dataset.docId);
       }
     });
 
-    // File input change handler
-    el.querySelector('[data-bind="kbFileInput"]').addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (file) {
-        uploadFile(file);
-        e.target.value = ''; // Reset so same file can be re-selected
+    // KB download (delegated)
+    el.addEventListener('click', async (e) => {
+      const downloadLink = e.target.closest('[data-action="kbDownload"]');
+      if (downloadLink) {
+        e.preventDefault();
+        const s3Key = downloadLink.dataset.s3Key;
+        if (!s3Key) return;
+        try {
+          const res = await filesApi.getDownloadUrl(s3Key);
+          const url = res.data?.download_url;
+          if (url) window.open(url, '_blank');
+        } catch (err) { alert('Failed to get download link: ' + err.message); }
       }
     });
   }

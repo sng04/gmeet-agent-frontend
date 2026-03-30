@@ -2,10 +2,10 @@ import { authStore } from './stores/auth.js';
 
 // Public routes (no auth required)
 const publicRoutes = {
-  'login': () => import('./controllers/user/UserLoginController.js'),
-  'change-password': () => import('./controllers/user/UserChangePasswordController.js'),
-  'admin/login': () => import('./controllers/admin/AdminLoginController.js'),
-  'admin/change-password': () => import('./controllers/admin/AdminChangePasswordController.js'),
+  'login/user': () => import('./controllers/user/UserLoginController.js'),
+  'login/user/change-password': () => import('./controllers/user/UserChangePasswordController.js'),
+  'login/admin': () => import('./controllers/admin/AdminLoginController.js'),
+  'login/admin/change-password': () => import('./controllers/admin/AdminChangePasswordController.js'),
 };
 
 const adminRoutes = {
@@ -110,9 +110,9 @@ export async function render() {
   
   if (publicMatch) {
     // Special handling for change-password routes - need active challenge
-    if ((path === 'change-password' || path === 'admin/change-password') && challenge !== 'NEW_PASSWORD_REQUIRED') {
+    if ((path === 'login/user/change-password' || path === 'login/admin/change-password') && challenge !== 'NEW_PASSWORD_REQUIRED') {
       console.log('No active password challenge, redirecting');
-      navigate(hasToken ? '' : (path.startsWith('admin') ? 'admin/login' : 'login'));
+      navigate(hasToken ? '' : (path.includes('admin') ? 'login/admin' : 'login/user'));
       return;
     }
     
@@ -142,14 +142,14 @@ export async function render() {
   if (!hasToken) {
     console.log('No token, redirecting to login');
     const isAdminPath = path.startsWith('admin') || (path === '' && localStorage.getItem('user_role') === 'admin');
-    navigate(isAdminPath ? 'admin/login' : 'login');
+    navigate(isAdminPath ? 'login/admin' : 'login/user');
     return;
   }
 
   // If has challenge, redirect to change password
   if (challenge === 'NEW_PASSWORD_REQUIRED') {
     console.log('Has challenge, redirecting to change password');
-    navigate(isAdmin ? 'admin/change-password' : 'change-password');
+    navigate(isAdmin ? 'login/admin/change-password' : 'login/user/change-password');
     return;
   }
 

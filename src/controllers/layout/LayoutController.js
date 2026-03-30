@@ -92,7 +92,7 @@ export default async function LayoutController() {
       try { await authApi.logout(); } catch (err) { console.error('Logout error:', err); }
       authStore.logout();
       api.clearTokens();
-      navigate(wasAdmin ? 'admin/login' : 'login');
+      navigate(wasAdmin ? 'login/admin' : 'login/user');
     });
   }
 

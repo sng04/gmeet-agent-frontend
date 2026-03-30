@@ -18,7 +18,7 @@ export default async function AdminChangePasswordController() {
 
   // If no challenge, redirect to admin login
   if (!challenge || !challengeSession || !challengeUsername) {
-    navigate('admin/login');
+    navigate('login/admin');
     return container;
   }
 

@@ -18,7 +18,7 @@ export default async function UserChangePasswordController() {
 
   // If no challenge, redirect to user login
   if (!challenge || !challengeSession || !challengeUsername) {
-    navigate('login');
+    navigate('login/user');
     return container;
   }
 

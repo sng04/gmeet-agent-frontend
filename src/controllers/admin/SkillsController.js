@@ -4,6 +4,8 @@ import { Modal } from '../../components/ui/Modal.js';
 import { SearchBox } from '../../components/ui/Form.js';
 import { navigate } from '../../router.js';
 import { skillsApi } from '../../api/skills.js';
+import { filesApi } from '../../api/files.js';
+import { SKILLS_BUCKET } from '../../config.js';
 import { formatDate } from '../../utils/format.js';
 import { extractList } from '../../utils/api-helpers.js';
 
@@ -57,7 +59,7 @@ export default async function SkillsController() {
         '<div class="card-hdr">' +
           '<div>' +
             '<div class="text-md fw-sb">' + s.skill_name + '</div>' +
-            '<div class="mono text-xs" style="color:var(--pri-600);margin-top:4px">📄 ' + fname + '</div>' +
+            '<div class="mono text-xs" style="margin-top:4px"><a href="#" class="text-pri" style="text-decoration:none" data-action="downloadSkill" data-s3-key="' + (s.s3_key || '') + '">📄 ' + fname + '</a></div>' +
             (s.description ? '<div class="text-xs text-t mt-1">' + s.description + '</div>' : '') +
           '</div>' +
           '<div class="flex gap-2">' +
@@ -80,6 +82,18 @@ export default async function SkillsController() {
   });
 
   el.addEventListener('click', async function(e) {
+    var downloadLink = e.target.closest('[data-action="downloadSkill"]');
+    if (downloadLink) {
+      e.preventDefault();
+      var s3Key = downloadLink.dataset.s3Key;
+      if (!s3Key) return;
+      try {
+        var res = await filesApi.getDownloadUrl(s3Key, SKILLS_BUCKET);
+        var url = res.data?.download_url;
+        if (url) window.open(url, '_blank');
+      } catch (err) { alert('Failed to get download link: ' + err.message); }
+      return;
+    }
     var delBtn = e.target.closest('[data-delete-skill]');
     if (delBtn) {
       if (!confirm('Delete this skill?')) return;
