@@ -6,6 +6,7 @@ import { getVerificationBadge, getContainerStatusBadge } from '../../components/
 import { navigate } from '../../router.js';
 import { botCredentialApi } from '../../api/botCredential.js';
 import { botPoolApi } from '../../api/botPool.js';
+import { sanitize } from '../../utils/sanitize.js';
 
 export default async function GmailCredentialsController(params) {
   const el = await loadTemplate('/templates/admin/gmail-credentials.html', 'gmail-credentials');
@@ -77,7 +78,7 @@ export default async function GmailCredentialsController(params) {
         <div class="empty">
           <div class="empty-icon">⚠️</div>
           <div class="empty-title">Failed to load credentials</div>
-          <div class="empty-desc">${err.message}</div>
+          <div class="empty-desc">${sanitize(err.message)}</div>
         </div>
       `;
     }
@@ -176,7 +177,7 @@ export default async function GmailCredentialsController(params) {
             ${containers.map(c => `
               <tr>
                 <td><code class="text-xs">${c.container_id}</code></td>
-                <td>${c.current_session_name || '—'}</td>
+                <td>${sanitize(c.current_session_name || '—')}</td>
                 <td>${getContainerStatusBadge(c.status)}</td>
               </tr>
             `).join('')}
@@ -185,7 +186,7 @@ export default async function GmailCredentialsController(params) {
       `;
       expandRow.querySelector('.pool-content').innerHTML = poolHtml;
     } catch (err) {
-      expandRow.querySelector('.pool-content').innerHTML = `<div class="text-center text-t py-4">Failed to load pool: ${err.message}</div>`;
+      expandRow.querySelector('.pool-content').innerHTML = `<div class="text-center text-t py-4">Failed to load pool: ${sanitize(err.message)}</div>`;
     }
   }
 
@@ -258,15 +259,15 @@ export default async function GmailCredentialsController(params) {
           </button>
         </td>
         <td>
-          <span class="mono text-sm">${cred.email}</span>
-          ${isFailed && cred.verification_error ? `<div class="text-xs" style="color:var(--err-500);margin-top:2px">${cred.verification_error}</div>` : ''}
+          <span class="mono text-sm">${sanitize(cred.email)}</span>
+          ${isFailed && cred.verification_error ? `<div class="text-xs" style="color:var(--err-500);margin-top:2px">${sanitize(cred.verification_error)}</div>` : ''}
         </td>
         <td>${getStatusText(cred)}</td>
         <td>${cred.warm_pool_size || 0}</td>
         <td>
           <div class="flex gap-2 jc-end">
             <button class="btn btn-s btn-sm" data-action="edit" data-id="${cred.credential_id}">${isFailed ? 'Retry' : 'Edit'}</button>
-            <button class="btn btn-d btn-sm" data-action="delete" data-id="${cred.credential_id}" data-email="${cred.email}">Remove</button>
+            <button class="btn btn-d btn-sm" data-action="delete" data-id="${cred.credential_id}" data-email="${sanitize(cred.email)}">Remove</button>
           </div>
         </td>
       `;

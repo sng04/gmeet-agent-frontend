@@ -9,4 +9,5 @@ build/
 .aws
 .kiro/specs
 infra/cdk.out
+infra/cdk.out.fresh
 DEVELOPER 2

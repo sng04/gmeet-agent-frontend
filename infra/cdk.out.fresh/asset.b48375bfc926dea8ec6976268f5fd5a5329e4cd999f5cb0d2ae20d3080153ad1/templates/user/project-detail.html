@@ -1,0 +1,144 @@
+<template id="project-detail">
+  <div class="page">
+    <div class="bc">
+      <a href="#" data-action="backNav">My Projects</a>
+      <span class="sep">›</span>
+      <span class="cur" data-bind="projectName">Project</span>
+    </div>
+    <div class="pg-hdr">
+      <div>
+        <h1 data-bind="title">Project Detail</h1>
+        <div class="pg-sub" data-bind="description"></div>
+      </div>
+      <div class="pg-actions" data-bind="actions"></div>
+    </div>
+
+    <!-- Loading State -->
+    <div data-bind="pageLoading">
+      <div class="loading">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Loading project...</div>
+      </div>
+    </div>
+
+    <!-- Content (hidden by default) -->
+    <div data-bind="pageContent" style="display:none">
+      <!-- Live Session Banner -->
+      <div class="card mb-6" style="border-color:var(--err-500);background:var(--err-50)" data-bind="liveBanner">
+        <div class="card-body" style="padding:14px 20px">
+          <div class="flex items-c gap-3">
+            <span class="badge b-live" style="font-size:12px;padding:4px 10px"><span class="dot"></span> Live Session</span>
+            <div>
+              <div class="text-sm fw-sb text-p">Integration Planning</div>
+              <div class="text-xs text-t">Started by you · 12 min ago · 3 Q&A pairs</div>
+            </div>
+            <button class="btn btn-live btn-sm" style="margin-left:auto" data-action="openLive">Open Live View →</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stats -->
+    <div class="g g3 mb-6">
+      <div class="stat" style="cursor:default">
+        <div class="stat-label">Default Agent</div>
+        <div class="stat-val" style="font-size:15px;margin-top:4px" data-bind="statAgent"></div>
+      </div>
+      <div class="stat" style="cursor:default">
+        <div class="stat-label">Total Sessions</div>
+        <div class="stat-val" data-bind="statSessions"></div>
+      </div>
+      <div class="stat" style="cursor:default">
+        <div class="stat-label">Total Q&A Pairs</div>
+        <div class="stat-val" data-bind="statQA"></div>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <div class="tab active" data-tab="sessions">📋 Sessions</div>
+      <div class="tab" data-tab="qna">💬 Q&A Pairs</div>
+      <div class="tab" data-tab="kb">📚 Knowledge Base</div>
+    </div>
+
+    <!-- Sessions Tab -->
+    <div class="tab-c active" id="tab-sessions">
+      <div data-bind="sessionsLoading">
+        <div class="loading">
+          <div class="loading-spinner"></div>
+          <div class="loading-text">Loading sessions...</div>
+        </div>
+      </div>
+      <div data-bind="sessionsContent" style="display:none">
+        <div class="tbl-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Session</th>
+                <th>Status</th>
+                <th>Meet Link</th>
+                <th>Q&A</th>
+                <th>Duration</th>
+                <th style="text-align:right">Action</th>
+              </tr>
+            </thead>
+            <tbody data-bind="sessionsBody"></tbody>
+          </table>
+          <div class="tbl-foot" data-bind="sessionsFoot"></div>
+        </div>
+      </div>
+      <div data-bind="sessionsEmpty" style="display:none">
+        <div class="empty">
+          <div class="empty-icon">📋</div>
+          <div class="empty-title">No sessions yet</div>
+          <div class="empty-desc">Click "+ New Session" to create your first session</div>
+        </div>
+      </div>
+      <div data-bind="sessionsError" style="display:none"></div>
+    </div>
+
+    <!-- Q&A Tab -->
+    <div class="tab-c" id="tab-qna">
+      <div class="g g3 mb-5" style="max-width:500px">
+        <div class="stat" style="cursor:default"><div class="stat-label">Total Q&A Pairs</div><div class="stat-val" data-bind="qaTotalVal"></div></div>
+        <div class="stat" style="cursor:default"><div class="stat-label">Avg Confidence</div><div class="stat-val">88%</div></div>
+        <div class="stat" style="cursor:default"><div class="stat-label">Sessions with Q&A</div><div class="stat-val">3</div></div>
+      </div>
+      <div data-bind="qaCards"></div>
+    </div>
+
+    <!-- KB Tab -->
+    <div class="tab-c" id="tab-kb">
+      <div style="margin-bottom:16px">
+        <div class="text-sm text-t" data-bind="kbDocCount"></div>
+      </div>
+      <div data-bind="kbLoading">
+        <div class="loading"><div class="loading-spinner"></div><div class="loading-text">Loading documents...</div></div>
+      </div>
+      <div data-bind="kbContent" style="display:none">
+        <div class="tbl-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Document</th>
+                <th>Description</th>
+                <th>Status</th>
+                <th>Uploaded</th>
+              </tr>
+            </thead>
+            <tbody data-bind="kbDocsBody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div data-bind="kbEmpty" style="display:none">
+        <div class="empty">
+          <div class="empty-icon">📚</div>
+          <div class="empty-title">No documents yet</div>
+          <div class="empty-desc">Upload PDF or Markdown files for the AI agent to reference during meetings</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Error State -->
+    <div data-bind="pageError" style="display:none"></div>
+  </div>
+</template>

@@ -1,0 +1,138 @@
+<template id="live-session">
+  <div class="page">
+    <!-- Loading State -->
+    <div data-bind="pageLoading">
+      <div class="loading">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Loading session...</div>
+      </div>
+    </div>
+
+    <!-- Content -->
+    <div data-bind="pageContent" style="display:none">
+      <div class="bc">
+        <a href="#" data-action="backNav" data-bind="backLink">Project</a>
+        <span class="sep">›</span>
+        <span class="cur">Live Session</span>
+      </div>
+      <div class="pg-hdr">
+        <div>
+          <h1 data-bind="sessionName">Session</h1>
+          <div class="pg-sub">Project: <span data-bind="projectName"></span></div>
+        </div>
+        <div class="pg-actions">
+          <div class="mode-toggle" id="session-mode-toggle">
+            <button class="mode-btn active" data-mode="live">🔴 Live</button>
+            <button class="mode-btn" data-mode="retro">📋 Retro</button>
+          </div>
+          <div class="conn ok" id="conn-status"><span class="conn-dot"></span> Connected</div>
+          <button class="btn btn-d btn-sm" id="btn-end-session">End Session</button>
+        </div>
+      </div>
+      <div class="sess-meta mb-5">
+        <div class="sess-meta-item"><span>📁</span><strong>Project:</strong> <span data-bind="metaProject"></span></div><div class="sess-meta-div"></div>
+        <div class="sess-meta-item"><span>🔗</span><strong>Meet:</strong> <a href="#" data-bind="metaMeetLink" data-external target="_blank" class="text-pri"></a></div><div class="sess-meta-div"></div>
+        <div class="sess-meta-item"><span>⏱️</span><strong>Duration:</strong> <span data-bind="metaDuration"></span></div><div class="sess-meta-div"></div>
+        <div class="sess-meta-item"><span>💬</span><strong>Q&A Pairs:</strong> <span data-bind="metaQA"></span></div><div class="sess-meta-div"></div>
+        <div class="sess-meta-item"><span>📅</span><strong>Started:</strong> <span data-bind="metaStarted"></span></div><div class="sess-meta-div"></div>
+        <div class="sess-meta-item" id="sess-status-badge" data-bind="statusBadge"><span class="badge b-live"><span class="dot"></span> Live</span></div>
+      </div>
+
+      <!-- LIVE MODE -->
+      <div class="mode-panel active" id="mode-live">
+        <div class="live-layout">
+          <div>
+            <div class="text-md fw-sb mb-4">Q&amp;A Pairs</div>
+            <div data-bind="liveQaList"></div>
+          </div>
+          <div>
+            <div class="tabs" style="margin-bottom:16px">
+              <div class="tab active" data-tab="live-gaps">⚠️ Knowledge Gaps</div>
+              <div class="tab" data-tab="live-transcript">📝 Live Transcript</div>
+            </div>
+            <div class="tab-c active" id="tab-live-gaps">
+              <!-- Question Match Notifications -->
+              <div data-bind="questionMatchNotifications"></div>
+              <!-- Knowledge Gaps (auto-loaded on connect) -->
+              <div data-bind="gapCards">
+                <div class="loading"><div class="loading-spinner"></div><div class="loading-text">Analyzing knowledge gaps...</div></div>
+              </div>
+            </div>
+            <div class="tab-c" id="tab-live-transcript">
+              <div class="card">
+                <div class="card-hdr">
+                  <div class="text-md fw-sb">Live Transcript</div>
+                  <div style="display:flex;align-items:center;gap:10px">
+                    <span class="transcript-live-badge" data-bind="transcriptLiveBadge" style="display:none"><span class="live-dot-sm"></span> LIVE</span>
+                    <div class="text-xs text-t">Speech-to-text · auto-scroll</div>
+                  </div>
+                </div>
+                <div class="card-body transcript-scroll-container" data-bind="transcriptContainer" style="max-height:500px;overflow-y:auto">
+                  <div class="tscript" data-bind="liveTranscript">
+                    <div class="empty" data-bind="transcriptEmpty">
+                      <div class="empty-icon">📝</div>
+                      <div class="empty-title">No transcript yet</div>
+                      <div class="empty-desc">Transcript will appear here when the meeting starts</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RETRO MODE -->
+      <div class="mode-panel" id="mode-retro">
+        <div class="retro-layout">
+          <div>
+            <div class="tabs">
+              <div class="tab active" data-tab="retro-qna">💬 Q&A Pairs</div>
+              <div class="tab" data-tab="retro-transcript">📝 Full Transcript</div>
+            </div>
+            <div class="tab-c active" id="tab-retro-qna">
+              <div data-bind="retroQaList"></div>
+            </div>
+            <div class="tab-c" id="tab-retro-transcript">
+              <div class="card">
+                <div class="card-hdr"><div class="text-md fw-sb">Full Transcript</div><div class="text-xs text-t">Raw speech-to-text output · <span data-bind="retroTranscriptCount">0</span> entries</div></div>
+                <div class="card-body" style="max-height:500px;overflow-y:auto">
+                  <div class="tscript" data-bind="retroTranscript">
+                    <div class="empty">
+                      <div class="empty-icon">📝</div>
+                      <div class="empty-title">No transcript available</div>
+                      <div class="empty-desc">Transcript will be available after the meeting</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="card" style="position:sticky;top:24px">
+            <div class="card-hdr">
+              <div class="text-md fw-sb">AI Chat</div>
+              <div class="text-xs text-t">Ask about this session</div>
+            </div>
+            <div class="chat-test-panel" style="border:none;border-radius:0">
+              <div class="chat-test-msgs" data-bind="chatMsgs" style="min-height:280px;max-height:420px;overflow-y:auto">
+                <div class="chat-test-row"><div class="chat-test-bubble ai-bubble"><div class="agent-lbl">MeetAgent AI</div><div class="chat-test-body">I've analyzed this session. Ask me about the Q&A, what's been covered, or anything from the transcript.</div></div></div>
+              </div>
+              <div style="padding:8px 16px;border-top:1px solid var(--gray-100);display:flex;flex-wrap:wrap;gap:6px">
+                <button class="ai-chip">Key themes?</button>
+                <button class="ai-chip">Draft follow-up email</button>
+                <button class="ai-chip">What was missed?</button>
+              </div>
+              <div class="chat-test-input">
+                <input type="text" placeholder="Ask about this session..." data-bind="chatInput">
+                <button data-action="chatSend">Send</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Error State -->
+    <div data-bind="pageError" style="display:none"></div>
+  </div>
+</template>

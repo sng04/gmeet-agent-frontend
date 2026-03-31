@@ -1,0 +1,17 @@
+<template id="skills">
+  <div class="page">
+    <div class="pg-hdr">
+      <div>
+        <h1>Skills</h1>
+        <div class="pg-sub">Agent-specific knowledge documents (PDF or Markdown) uploaded via pre-signed S3 URLs</div>
+      </div>
+      <div class="pg-actions" data-bind="actions"></div>
+    </div>
+    <div class="filters" data-bind="filters"></div>
+    <div data-bind="loading" style="display:none">
+      <div class="loading"><div class="loading-spinner"></div><div class="loading-text">Loading skills...</div></div>
+    </div>
+    <div data-bind="error" style="display:none"></div>
+    <div data-bind="skillsList"></div>
+  </div>
+</template>
