@@ -9,7 +9,7 @@ export const skillsApi = {
   create: (data) => api.post('/skills', data),
   update: (id, data) => api.put(`/skills/${id}`, data),
   delete: (id) => api.delete(`/skills/${id}`),
-  replaceDocument: (id) => api.post(`/skills/${id}/replace-document`),
+  replaceDocument: (id, data = {}) => api.post(`/skills/${id}/replace`, data),
 
   /**
    * Upload file to the pre-signed URL returned by create().

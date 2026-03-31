@@ -3,24 +3,40 @@
     <div class="pg-hdr">
       <div>
         <h1>Q&A Monitor</h1>
-        <div class="pg-sub">All question-answer pairs across sessions, in chronological order</div>
+        <div class="pg-sub">All question-answer pairs across sessions</div>
       </div>
     </div>
-    <div class="filters" data-bind="filters"></div>
-    <div class="g g3 mb-5" style="max-width:500px">
-      <div class="stat" style="cursor:default">
-        <div class="stat-label">Total Q&A Pairs</div>
-        <div class="stat-val" data-bind="totalQA"></div>
-      </div>
-      <div class="stat" style="cursor:default">
-        <div class="stat-label">Avg Confidence</div>
-        <div class="stat-val" data-bind="avgConfidence"></div>
-      </div>
-      <div class="stat" style="cursor:default">
-        <div class="stat-label">Sessions with Q&A</div>
-        <div class="stat-val" data-bind="sessionsWithQA"></div>
+
+    <!-- Loading State -->
+    <div data-bind="pageLoading">
+      <div class="loading">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Loading Q&A pairs...</div>
       </div>
     </div>
-    <div data-bind="qaList"></div>
+
+    <!-- Content -->
+    <div data-bind="pageContent" style="display:none">
+      <div class="filters mb-4">
+        <input type="text" class="form-i" placeholder="Search questions or answers..." data-bind="searchInput" style="max-width:300px">
+        <select class="form-sel" data-bind="projectFilter" style="max-width:200px">
+          <option value="">All Projects</option>
+        </select>
+      </div>
+
+      <div data-bind="qaList"></div>
+
+      <!-- Empty State -->
+      <div data-bind="emptyState" style="display:none">
+        <div class="empty">
+          <div class="empty-icon">💬</div>
+          <div class="empty-title">No Q&A pairs found</div>
+          <div class="empty-desc">Try adjusting your search or filters</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Error State -->
+    <div data-bind="pageError" style="display:none"></div>
   </div>
 </template>

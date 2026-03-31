@@ -230,27 +230,66 @@ export default async function ProjectDetailController(params) {
       + '</tbody></table>';
   }
 
-  async function handleKbUpload(file) {
-    showLoading('Uploading ' + file.name + '...');
-    try {
-      const res = await kbDocumentsApi.create(projectId, { file_name: file.name, description: '' });
-      const uploadUrl = res.data?.upload_url;
-      const contentType = res.data?.content_type || 'application/octet-stream';
-      if (!uploadUrl) throw new Error('No upload URL returned');
+  function showKbUploadModal() {
+    var selectedFile = null;
+    var body = document.createElement('div');
+    body.innerHTML =
+      '<div class="form-g">'
+      + '<label class="form-l">File <span class="req">*</span></label>'
+      + '<div class="upload-zone" id="kb-upload-zone" style="cursor:pointer;padding:20px;text-align:center;border:2px dashed var(--gray-200);border-radius:8px">'
+      + '<div class="text-sm text-t" id="kb-upload-zone-text">📤 Click to select a file (PDF, Markdown, DOCX, or TXT)</div>'
+      + '<input type="file" id="kb-upload-file" accept=".pdf,.md,.markdown,.txt,.docx" style="display:none">'
+      + '</div>'
+      + '<div id="kb-upload-selected" style="display:none;margin-top:8px"></div>'
+      + '</div>'
+      + '<div class="form-g">'
+      + '<label class="form-l">Description <span style="font-weight:400;color:var(--gray-400)">(optional)</span></label>'
+      + '<textarea class="form-ta" id="kb-upload-desc" rows="2" placeholder="Briefly describe this document..."></textarea>'
+      + '</div>'
+      + '<div id="kb-upload-error" style="display:none;color:var(--err-600);font-size:13px;margin-top:8px"></div>';
 
-      const uploadRes = await fetch(uploadUrl, {
-        method: 'PUT',
-        headers: { 'Content-Type': contentType },
-        body: file,
-      });
-      if (!uploadRes.ok) throw new Error('S3 upload failed: ' + uploadRes.status);
+    var zone = body.querySelector('#kb-upload-zone');
+    var fileInput = body.querySelector('#kb-upload-file');
+    var zoneText = body.querySelector('#kb-upload-zone-text');
+    var selectedEl = body.querySelector('#kb-upload-selected');
 
-      hideLoading();
-      await loadKbDocuments();
-    } catch (err) {
-      hideLoading();
-      alert('Failed to upload: ' + err.message);
-    }
+    zone.addEventListener('click', function() { fileInput.click(); });
+    fileInput.addEventListener('change', function() {
+      if (fileInput.files.length) {
+        selectedFile = fileInput.files[0];
+        zoneText.textContent = '📄 ' + selectedFile.name;
+        zone.style.borderColor = 'var(--ok-400)';
+        zone.style.background = 'var(--ok-25)';
+        selectedEl.style.display = 'block';
+        selectedEl.innerHTML = '<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--ok-50);border:1px solid var(--ok-200);border-radius:8px"><span>✅</span><div style="flex:1"><div class="text-sm fw-m">' + selectedFile.name + '</div><div class="text-xs text-t">' + (selectedFile.size / 1024).toFixed(0) + ' KB</div></div></div>';
+      }
+    });
+
+    var footer = document.createElement('div');
+    footer.style.cssText = 'display:flex;gap:12px;justify-content:flex-end';
+    var modal;
+    var cancelBtn = Button({ text: 'Cancel', variant: 's', onClick: function() { modal.close(); } });
+    var uploadBtn = Button({ text: 'Upload', variant: 'p', onClick: async function() {
+      var errEl = body.querySelector('#kb-upload-error');
+      if (!selectedFile) { errEl.textContent = 'Please select a file.'; errEl.style.display = ''; return; }
+      var description = (body.querySelector('#kb-upload-desc').value || '').trim();
+      uploadBtn.disabled = true; uploadBtn.textContent = 'Uploading...'; errEl.style.display = 'none';
+      try {
+        var res = await kbDocumentsApi.create(projectId, { file_name: selectedFile.name, description: description });
+        var uploadUrl = res.data?.upload_url;
+        var contentType = res.data?.content_type || 'application/octet-stream';
+        if (!uploadUrl) throw new Error('No upload URL returned');
+        uploadBtn.textContent = 'Sending file...';
+        var uploadRes = await fetch(uploadUrl, { method: 'PUT', headers: { 'Content-Type': contentType }, body: selectedFile });
+        if (!uploadRes.ok) throw new Error('S3 upload failed: ' + uploadRes.status);
+        modal.close();
+        await loadKbDocuments();
+      } catch (err) { errEl.textContent = err.message; errEl.style.display = ''; }
+      finally { uploadBtn.disabled = false; uploadBtn.textContent = 'Upload'; }
+    }});
+    footer.appendChild(cancelBtn);
+    footer.appendChild(uploadBtn);
+    modal = Modal({ title: 'Upload Knowledge Base Document', body: body, footer: footer });
   }
 
   function handleKbDelete(docId) {
@@ -392,14 +431,7 @@ export default async function ProjectDetailController(params) {
     // KB upload
     el.querySelector('[data-action="kbUploadClick"]')?.addEventListener('click', (e) => {
       e.stopPropagation();
-      el.querySelector('[data-bind="kbFileInput"]')?.click();
-    });
-    el.querySelector('[data-bind="kbFileInput"]')?.addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (file) {
-        handleKbUpload(file);
-        e.target.value = '';
-      }
+      showKbUploadModal();
     });
 
     // KB download and delete (delegated)

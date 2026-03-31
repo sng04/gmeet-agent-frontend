@@ -193,12 +193,13 @@ export default async function SkillsController() {
         await skillsApi.update(skill.skill_id, { skill_name: name, description: fd.get('description') || '' });
         if (newFile) {
           saveBtn.textContent = 'Replacing document...';
-          var replaceRes = await skillsApi.replaceDocument(skill.skill_id);
+          var replaceRes = await skillsApi.replaceDocument(skill.skill_id, { file_name: newFile.name });
           var uploadUrl = replaceRes.data?.upload_url;
           var replaceContentType = replaceRes.data?.content_type;
           if (uploadUrl) {
             saveBtn.textContent = 'Uploading...';
-            await skillsApi.upload(uploadUrl, newFile, replaceContentType);
+            var upRes = await skillsApi.upload(uploadUrl, newFile, replaceContentType);
+            if (!upRes.ok) throw new Error('Upload failed: ' + upRes.status);
           }
         }
         modal.close(); load();

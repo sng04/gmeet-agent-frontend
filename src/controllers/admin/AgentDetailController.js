@@ -162,6 +162,49 @@ export default async function AgentDetailController(params) {
     });
   }
 
+  // Agent history
+  async function renderAgentHistory() {
+    var container = el.querySelector('[data-bind="agentHistory"]');
+    if (!container) return;
+    try {
+      var res = await agentsApi.history(agentId, { limit: 20 });
+      var versions = res.data?.versions || [];
+      if (!versions.length) {
+        container.innerHTML = '<div class="card-body text-xs text-t">No change history yet.</div>';
+        return;
+      }
+
+      function promptDetail(label, text) {
+        var safe = sanitize(text || '—');
+        return '<details style="margin-top:8px;border:1px solid var(--gray-100);border-radius:8px;overflow:hidden">'
+          + '<summary style="padding:8px 12px;font-size:12px;font-weight:600;color:var(--gray-600);cursor:pointer;background:var(--gray-25);user-select:none">' + label + '</summary>'
+          + '<pre style="margin:0;padding:12px;font-size:11px;line-height:1.6;color:var(--gray-700);white-space:pre-wrap;font-family:var(--mono);background:var(--white);max-height:300px;overflow-y:auto">' + safe + '</pre>'
+          + '</details>';
+      }
+
+      container.innerHTML = versions.map(function(v) {
+        var skillsList = (v.skill_names || []).map(function(s) { return sanitize(s); }).join(', ') || 'None';
+        var date = v.snapshot_at ? formatDate(v.snapshot_at) : '—';
+        return '<div style="padding:16px 20px;border-top:1px solid var(--gray-100)">'
+          + '<div class="flex jc-b items-c mb-3">'
+          + '<div class="text-sm fw-sb">Version ' + v.version + ' — ' + sanitize(v.agent_name || '') + '</div>'
+          + '<span class="text-xs text-t">' + date + '</span>'
+          + '</div>'
+          + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 16px;font-size:12px;margin-bottom:8px">'
+          + '<div><span class="text-t">Personality:</span> <span class="fw-m">' + sanitize(v.personality_name || '—') + '</span></div>'
+          + '<div><span class="text-t">Model:</span> <span class="mono">' + sanitize(v.model_id || '—') + '</span></div>'
+          + '<div><span class="text-t">Use Case:</span> ' + sanitize(v.use_case || '—') + '</div>'
+          + '<div><span class="text-t">Skills:</span> ' + skillsList + '</div>'
+          + '</div>'
+          + promptDetail('Role Prompt', v.role_prompt)
+          + promptDetail('Behavior Guidelines', v.behavior_guidelines)
+          + '</div>';
+      }).join('');
+    } catch (err) {
+      container.innerHTML = '<div class="card-body text-xs text-t">Failed to load history.</div>';
+    }
+  }
+
   // Edit skills
   function renderEditSkills(list) {
     var c = el.querySelector('[data-bind="editSkillsList"]');

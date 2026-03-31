@@ -11,5 +11,5 @@ export const kbDocumentsApi = {
   get: (projectId, docId) => api.get(`/projects/${projectId}/kb-documents/${docId}`),
   create: (projectId, data) => api.post(`/projects/${projectId}/kb-documents`, data),
   delete: (projectId, docId) => api.delete(`/projects/${projectId}/kb-documents/${docId}`),
-  replace: (projectId, docId) => api.post(`/projects/${projectId}/kb-documents/${docId}/replace`),
+  replace: (projectId, docId, data = {}) => api.post(`/projects/${projectId}/kb-documents/${docId}/replace`, data),
 };

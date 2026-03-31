@@ -9,6 +9,13 @@ export const agentsApi = {
   create: (data) => api.post('/agents', data),
   update: (id, data) => api.put(`/agents/${id}`, data),
   delete: (id) => api.delete(`/agents/${id}`),
+  history: (id, params = {}) => {
+    const query = new URLSearchParams();
+    if (params.limit) query.append('limit', params.limit);
+    if (params.lastKey) query.append('lastKey', params.lastKey);
+    const qs = query.toString();
+    return api.get(`/agents/${id}/history${qs ? `?${qs}` : ''}`);
+  },
   testPrompt: (data) => api.post('/agents/test-prompt', data),
   // Agent-Skill junction
   listSkills: (agentId) => api.get(`/agents/${agentId}/skills`),

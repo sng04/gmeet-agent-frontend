@@ -32,14 +32,18 @@ class ApiClient {
 
       if (res.status === 401) {
         this.token = null;
+        const wasAdmin = localStorage.getItem('user_role') === 'admin';
         localStorage.removeItem('access_token');
         localStorage.removeItem('id_token');
         localStorage.removeItem('refresh_token');
         localStorage.removeItem('user_role');
         localStorage.removeItem('user_info');
-        // Use History API navigation (not hash)
-        window.history.pushState({}, '', '/login/user');
-        window.dispatchEvent(new PopStateEvent('popstate'));
+        // Only redirect if not already on a login page
+        if (!window.location.pathname.startsWith('/login')) {
+          const loginPath = wasAdmin ? '/login/admin' : '/login/user';
+          window.history.pushState({}, '', loginPath);
+          window.dispatchEvent(new PopStateEvent('popstate'));
+        }
         throw new Error(data?.message || 'Unauthorized');
       }
 
