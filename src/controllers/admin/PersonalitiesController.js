@@ -1,6 +1,7 @@
 import { loadTemplate } from '../../utils/template.js';
 import { Button } from '../../components/ui/Button.js';
 import { Modal } from '../../components/ui/Modal.js';
+import { SearchBox } from '../../components/ui/Form.js';
 import { personalitiesApi } from '../../api/personalities.js';
 import { extractList, extractItem } from '../../utils/api-helpers.js';
 import { sanitize } from '../../utils/sanitize.js';
@@ -16,9 +17,23 @@ export default async function PersonalitiesController(params) {
   const errorEl = el.querySelector('[data-bind="error"]');
   const listEl = el.querySelector('[data-bind="list"]');
 
+  let searchTerm = '';
+  let allItems = [];
   let currentPage = 1;
   const PAGE_SIZE = 20;
   let hasMore = false;
+
+  const filters = el.querySelector('[data-bind="filters"]');
+  if (filters) {
+    filters.appendChild(SearchBox({
+      placeholder: 'Search personalities...',
+      onInput: (val) => {
+        searchTerm = val.toLowerCase();
+        currentPage = 1;
+        renderFiltered();
+      }
+    }));
+  }
 
   async function load() {
     loadingEl.style.display = '';
@@ -26,25 +41,30 @@ export default async function PersonalitiesController(params) {
     listEl.innerHTML = '';
     removePagination();
     try {
-      const res = await personalitiesApi.list({ page: currentPage, limit: PAGE_SIZE });
-      console.log('Personalities API response:', JSON.stringify(res));
-      const items = extractList(res);
-      const meta = res?.data;
-      if (meta && typeof meta === 'object' && !Array.isArray(meta)) {
-        hasMore = meta.total_pages ? currentPage < meta.total_pages
-          : meta.total ? currentPage * PAGE_SIZE < meta.total
-          : items.length === PAGE_SIZE;
-      } else {
-        hasMore = items.length === PAGE_SIZE;
-      }
+      const res = await personalitiesApi.list({ page: 1, limit: 200 });
+      allItems = extractList(res);
       loadingEl.style.display = 'none';
-      render(items);
-      renderPagination();
+      renderFiltered();
     } catch (err) {
       loadingEl.style.display = 'none';
       errorEl.style.display = '';
       errorEl.innerHTML = `<div class="empty"><div class="empty-icon">⚠️</div><div class="empty-title">Failed to load</div><div class="empty-desc">${sanitize(err.message)}</div></div>`;
     }
+  }
+
+  function renderFiltered() {
+    const filtered = allItems.filter(p =>
+      !searchTerm ||
+      (p.personality_name || '').toLowerCase().includes(searchTerm) ||
+      (p.personality_prompt || '').toLowerCase().includes(searchTerm)
+    );
+    const totalPages = Math.ceil(filtered.length / PAGE_SIZE) || 1;
+    if (currentPage > totalPages) currentPage = totalPages;
+    const start = (currentPage - 1) * PAGE_SIZE;
+    const pageItems = filtered.slice(start, start + PAGE_SIZE);
+    hasMore = currentPage < totalPages;
+    render(pageItems);
+    renderPagination();
   }
 
   function render(items) {
@@ -98,10 +118,10 @@ export default async function PersonalitiesController(params) {
     if (pageBtn && !pageBtn.disabled) {
       if (pageBtn.dataset.action === 'prevPage' && currentPage > 1) {
         currentPage--;
-        load();
+        renderFiltered();
       } else if (pageBtn.dataset.action === 'nextPage' && hasMore) {
         currentPage++;
-        load();
+        renderFiltered();
       }
       return;
     }

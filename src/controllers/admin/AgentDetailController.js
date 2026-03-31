@@ -65,6 +65,7 @@ export default async function AgentDetailController(params) {
   el.querySelector('[data-bind="guidelinesText"]').textContent = agent.behavior_guidelines || agent.task_prompt || '—';
   el.querySelector('[data-bind="configPersonality"]').textContent = personalityName;
   renderViewSkills(skills);
+  renderAgentHistory();
 
   // Actions
   var actionsEl = el.querySelector('[data-bind="actions"]');

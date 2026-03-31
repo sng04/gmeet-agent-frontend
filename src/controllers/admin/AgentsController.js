@@ -1,5 +1,6 @@
 import { loadTemplate } from '../../utils/template.js';
 import { Button } from '../../components/ui/Button.js';
+import { SearchBox } from '../../components/ui/Form.js';
 import { navigate } from '../../router.js';
 import { agentsApi } from '../../api/agents.js';
 import { formatDate } from '../../utils/format.js';
@@ -16,9 +17,23 @@ export default async function AgentsController(params) {
   const errorEl = el.querySelector('[data-bind="error"]');
   const listEl = el.querySelector('[data-bind="agentsList"]');
 
+  let searchTerm = '';
+  let allAgents = [];
   let currentPage = 1;
   const PAGE_SIZE = 20;
   let hasMore = false;
+
+  const filters = el.querySelector('[data-bind="filters"]');
+  if (filters) {
+    filters.appendChild(SearchBox({
+      placeholder: 'Search agents...',
+      onInput: (val) => {
+        searchTerm = val.toLowerCase();
+        currentPage = 1;
+        renderFiltered();
+      }
+    }));
+  }
 
   async function loadAgents() {
     loadingEl.style.display = '';
@@ -27,25 +42,29 @@ export default async function AgentsController(params) {
     removePagination();
 
     try {
-      const response = await agentsApi.list({ page: currentPage, limit: PAGE_SIZE });
-      console.log('Agents API response:', JSON.stringify(response));
-      const agents = extractList(response);
-      const meta = response?.data;
-      if (meta && typeof meta === 'object' && !Array.isArray(meta)) {
-        hasMore = meta.total_pages ? currentPage < meta.total_pages
-          : meta.total ? currentPage * PAGE_SIZE < meta.total
-          : agents.length === PAGE_SIZE;
-      } else {
-        hasMore = agents.length === PAGE_SIZE;
-      }
+      const response = await agentsApi.list({ page: 1, limit: 200 });
+      allAgents = extractList(response);
       loadingEl.style.display = 'none';
-      renderAgents(agents);
-      renderPagination();
+      renderFiltered();
     } catch (err) {
       loadingEl.style.display = 'none';
       errorEl.style.display = '';
       errorEl.innerHTML = `<div class="empty"><div class="empty-icon">⚠️</div><div class="empty-title">Failed to load agents</div><div class="empty-desc">${err.message}</div></div>`;
     }
+  }
+
+  function renderFiltered() {
+    const filtered = allAgents.filter(a =>
+      !searchTerm ||
+      (a.agent_name || '').toLowerCase().includes(searchTerm)
+    );
+    const totalPages = Math.ceil(filtered.length / PAGE_SIZE) || 1;
+    if (currentPage > totalPages) currentPage = totalPages;
+    const start = (currentPage - 1) * PAGE_SIZE;
+    const pageItems = filtered.slice(start, start + PAGE_SIZE);
+    hasMore = currentPage < totalPages;
+    renderAgents(pageItems);
+    renderPagination();
   }
 
   function renderAgents(agents) {
@@ -107,10 +126,10 @@ export default async function AgentsController(params) {
     if (pageBtn && !pageBtn.disabled) {
       if (pageBtn.dataset.action === 'prevPage' && currentPage > 1) {
         currentPage--;
-        loadAgents();
+        renderFiltered();
       } else if (pageBtn.dataset.action === 'nextPage' && hasMore) {
         currentPage++;
-        loadAgents();
+        renderFiltered();
       }
       return;
     }

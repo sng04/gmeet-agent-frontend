@@ -3,6 +3,7 @@ import { Button } from '../../components/ui/Button.js';
 import { Alert } from '../../components/ui/Alert.js';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog.js';
 import { getVerificationBadge, getContainerStatusBadge } from '../../components/ui/Badge.js';
+import { SearchBox } from '../../components/ui/Form.js';
 import { navigate } from '../../router.js';
 import { botCredentialApi } from '../../api/botCredential.js';
 import { botPoolApi } from '../../api/botPool.js';
@@ -25,7 +26,19 @@ export default async function GmailCredentialsController(params) {
   );
 
   let credentials = [];
+  let searchTerm = '';
   let pollingIntervals = new Map();
+
+  const filters = el.querySelector('[data-bind="filters"]');
+  if (filters) {
+    filters.appendChild(SearchBox({
+      placeholder: 'Search credentials...',
+      onInput: (val) => {
+        searchTerm = val.toLowerCase();
+        renderCredentials();
+      }
+    }));
+  }
   let refreshInterval = null;
 
   // Cleanup polling on page leave
@@ -213,12 +226,16 @@ export default async function GmailCredentialsController(params) {
   function renderCredentials() {
     const tableContainer = el.querySelector('[data-bind="credentialsList"]');
 
-    if (credentials.length === 0) {
+    const filtered = credentials.filter(c =>
+      !searchTerm || (c.email || '').toLowerCase().includes(searchTerm)
+    );
+
+    if (filtered.length === 0) {
       tableContainer.innerHTML = `
         <div class="empty">
           <div class="empty-icon">📧</div>
-          <div class="empty-title">No credentials found</div>
-          <div class="empty-desc">Click "Add Credential" to create your first Gmail credential</div>
+          <div class="empty-title">${searchTerm ? 'No matching credentials' : 'No credentials found'}</div>
+          <div class="empty-desc">${searchTerm ? 'Try a different search term' : 'Click "Add Credential" to create your first Gmail credential'}</div>
         </div>
       `;
       return;
@@ -240,13 +257,13 @@ export default async function GmailCredentialsController(params) {
         <tbody id="cred-tbody"></tbody>
       </table>
       <div class="tbl-foot">
-        <span>${credentials.length} credentials · Encrypted at rest via AWS KMS</span>
+        <span>${filtered.length} credentials · Encrypted at rest via AWS KMS</span>
       </div>
     `;
 
     const tbody = tableWrap.querySelector('#cred-tbody');
 
-    credentials.forEach(cred => {
+    filtered.forEach(cred => {
       // Main row
       const tr = document.createElement('tr');
       const isVerified = cred.verification_status === 'verified';

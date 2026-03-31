@@ -12,8 +12,8 @@ const adminMenu = [
   ]},
   { group: 'Management', items: [
     { id: 'users', icon: '👥', label: 'Users' },
-    { id: 'projects', icon: '📁', label: 'Projects', badge: '3' },
-    { id: 'agents', icon: '🤖', label: 'Agents', badge: '3' },
+    { id: 'projects', icon: '📁', label: 'Projects' },
+    { id: 'agents', icon: '🤖', label: 'Agents' },
     { id: 'personalities', icon: '🎭', label: 'Personalities' },
     { id: 'skills', icon: '⚡', label: 'Skills' },
     { id: 'gmail', icon: '📧', label: 'Gmail Credentials' },
