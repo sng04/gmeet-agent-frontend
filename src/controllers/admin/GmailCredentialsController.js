@@ -231,7 +231,6 @@ export default async function GmailCredentialsController(params) {
           <tr>
             <th style="width:40px"></th>
             <th>Gmail Account</th>
-            <th>Verification</th>
             <th>Status</th>
             <th>Pool Size</th>
             <th></th>
@@ -262,7 +261,6 @@ export default async function GmailCredentialsController(params) {
           <span class="mono text-sm">${cred.email}</span>
           ${isFailed && cred.verification_error ? `<div class="text-xs" style="color:var(--err-500);margin-top:2px">${cred.verification_error}</div>` : ''}
         </td>
-        <td>${getVerificationBadge(cred.verification_status)}</td>
         <td>${getStatusText(cred)}</td>
         <td>${cred.warm_pool_size || 0}</td>
         <td>
@@ -280,7 +278,7 @@ export default async function GmailCredentialsController(params) {
         expandRow.className = 'expand-row';
         expandRow.style.display = 'none';
         expandRow.innerHTML = `
-          <td colspan="6" style="padding:0;background:var(--gray-50)">
+          <td colspan="5" style="padding:0;background:var(--gray-50)">
             <div class="pool-content" style="padding:16px 20px"></div>
           </td>
         `;
