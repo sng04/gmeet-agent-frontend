@@ -1,6 +1,7 @@
 import { loadTemplate } from '../../utils/template.js';
 import { navigate } from '../../router.js';
 import { botCredentialApi } from '../../api/botCredential.js';
+import { botPoolApi } from '../../api/botPool.js';
 import { showLoading, hideLoading } from '../../components/ui/Loading.js';
 
 export default async function GmailCreateController(params) {
@@ -56,13 +57,22 @@ export default async function GmailCreateController(params) {
     showLoading('Creating credential...');
 
     try {
-      await botCredentialApi.create({
+      const response = await botCredentialApi.create({
         email,
         password,
         warm_pool_size: warmPoolSize,
       });
 
-      // Langsung ke list, polling akan dilakukan di sana
+      // Langsung trigger start warm pool
+      const credentialId = response.data?.credential_id;
+      if (credentialId && warmPoolSize > 0) {
+        try {
+          await botPoolApi.start({ credential_ids: [credentialId] });
+        } catch (poolErr) {
+          console.warn('Failed to start warm pool:', poolErr);
+        }
+      }
+
       hideLoading();
       navigate('gmail');
     } catch (err) {
