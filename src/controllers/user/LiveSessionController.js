@@ -42,7 +42,7 @@ function getUIStatus(botStatus) {
   const map = {
     'none': 'none', 'pending': 'starting', 'queued': 'starting',
     'starting': 'starting', 'joining': 'starting', 'in_meeting': 'live',
-    'running': 'live', 'stopping': 'stopping', 'stopped': 'stopping',
+    'running': 'live', 'stopping': 'stopping', 'stopped': 'finished',
     'completed': 'finished', 'failed': 'failed',
   };
   return map[botStatus] || botStatus;
@@ -83,6 +83,7 @@ export function parseSummaryChapters(markdown) {
 }
 
 export default async function LiveSessionController() {
+  console.log('[LiveSession] Controller loaded — v2');
   const el = await loadTemplate('/templates/user/live-session.html', 'live-session');
 
   const urlParams = new URLSearchParams(window.location.search);
@@ -103,22 +104,26 @@ export default async function LiveSessionController() {
   let project = null;
   let durationInterval = null;
   let statusPollInterval = null;
-  let transcriptPollInterval = null;
   let qaPollInterval = null;
 
   // Transcript state
   let transcriptLines = [];   // Final lines
+  let transcriptIdSet = new Set(); // For O(1) dedup
   let partialLine = null;     // Current partial
   let isUserScrolledUp = false;
 
   // MeetingSocket instance
   let socket = null;
 
-  // Q&A state (replaces mockQA)
+  // Q&A state
   let qaCards = [];
+  const seenQAEvents = new Set(); // Dedup by qa_pair_id + event type
 
   // Suggested questions state
   let suggestedQuestions = [];
+
+  // Speaker role map from speakerRoles event
+  let speakerRoleMap = {};
 
   // Connection state: 'disconnected' | 'connected' | 'reconnecting' | 'lost'
   let connectionState = 'disconnected';
@@ -137,7 +142,7 @@ export default async function LiveSessionController() {
 
   function renderAllTranscripts() {
     const container = el.querySelector('[data-bind="liveTranscript"]');
-    const emptyEl = el.querySelector('[data-bind="transcriptEmpty"]');
+    const emptyEl = container.querySelector('[data-bind="transcriptEmpty"]');
 
     if (transcriptLines.length === 0 && !partialLine) {
       if (emptyEl) emptyEl.style.display = '';
@@ -145,17 +150,21 @@ export default async function LiveSessionController() {
     }
     if (emptyEl) emptyEl.style.display = 'none';
 
+    // Build HTML but preserve the empty element (hidden)
     let html = transcriptLines.map(l => renderTranscriptLine(l, false)).join('');
     if (partialLine) {
       html += renderTranscriptLine(partialLine, true);
     }
-    container.innerHTML = html;
+    // Keep the empty element in DOM (hidden) so future queries still find it
+    const emptyHtml = emptyEl ? emptyEl.outerHTML.replace('style=""', 'style="display:none"') : '';
+    container.innerHTML = emptyHtml + html;
     autoScrollTranscript();
   }
 
   function appendTranscriptLine(line) {
     const container = el.querySelector('[data-bind="liveTranscript"]');
-    const emptyEl = el.querySelector('[data-bind="transcriptEmpty"]');
+    if (!container) return;
+    const emptyEl = container.querySelector('[data-bind="transcriptEmpty"]');
     if (emptyEl) emptyEl.style.display = 'none';
 
     // Remove existing partial element
@@ -168,7 +177,8 @@ export default async function LiveSessionController() {
 
   function updatePartialDisplay() {
     const container = el.querySelector('[data-bind="liveTranscript"]');
-    const emptyEl = el.querySelector('[data-bind="transcriptEmpty"]');
+    if (!container) return;
+    const emptyEl = container.querySelector('[data-bind="transcriptEmpty"]');
     if (emptyEl) emptyEl.style.display = 'none';
 
     // Remove old partial
@@ -222,18 +232,21 @@ export default async function LiveSessionController() {
   // ─── MeetingSocket setup ───
 
   function createSocket(sid) {
+    // agent_id comes from the project, not the session
+    const agentId = project?.agent_id || null;
+    console.log('Creating WebSocket for session=' + sid + ', agent=' + agentId);
     socket = new MeetingSocket({
       sessionId: sid,
-      agentId: session.agent_id,
+      agentId: agentId,
       onMessage: handleWSMessage,
       onOpen: () => {
         consecutiveCloses = 0;
         connectionState = 'connected';
         updateConnectionUI();
-        // Auto-trigger gap analysis and send suggested questions on first connect
         autoTriggerOnConnect();
-        // Re-fetch QA pairs on reconnect to catch any missed during disconnect
         refreshQAPairsFromREST();
+        startQAPairPolling();
+        startStaleCardRecovery();
       },
       onClose: () => {
         consecutiveCloses++;
@@ -272,68 +285,90 @@ export default async function LiveSessionController() {
   // ─── Central message router ───
 
   function handleWSMessage(data) {
-    switch (data.type) {
-      case 'transcriptLine':
-        if (data.line) {
-          handleTranscriptLine(data.line);
-        } else if (data.transcript_id) {
-          handleTranscriptLine(data);
-        }
-        break;
-      case 'transcriptProcessed':
-        handleTranscriptProcessed(data);
-        break;
-      case 'questionDetected':
-        handleQuestionDetected(data);
-        break;
-      case 'suggestedResponse':
-        handleSuggestedResponse(data);
-        break;
-      case 'questionMatched':
-        handleQuestionMatched(data);
-        break;
-      case 'qaPairAutoSaved':
-        handleQAPairAutoSaved(data);
-        break;
-      case 'questionUnanswered':
-        handleQuestionUnanswered(data);
-        break;
-      case 'suggestedQuestionsSet':
-        handleSuggestedQuestionsSet(data);
-        break;
-      case 'gapAnalysis':
-        handleGapAnalysis(data);
-        break;
-      case 'status':
-        handleStatusMessage(data);
-        break;
-      case 'meetingSummary':
-        handleMeetingSummary(data);
-        break;
-      case 'response':
-        handleChatResponse(data);
-        break;
-      case 'retroResponse':
-        handleChatResponse(data);
-        break;
-      case 'retroFeedback':
-        handleRetroFeedback(data);
-        break;
-      case 'error':
-        handleErrorMessage(data);
-        break;
-      default:
-        // Handle messages without a type field (legacy backend patterns)
-        if (data.line) {
-          handleTranscriptLine(data.line);
-        } else if (data.transcript_id) {
-          handleTranscriptLine(data);
-        }
-        break;
+    try {
+      // Deduplicate QA events by qa_pair_id + type (DDB Stream may double-deliver)
+      if (data.type && ['questionDetected', 'suggestedResponse', 'qaPairAutoSaved', 'questionUnanswered'].includes(data.type)) {
+        const dedupeKey = data.type + ':' + (data.qa_pair_id || data.question || '');
+        if (seenQAEvents.has(dedupeKey)) return;
+        seenQAEvents.add(dedupeKey);
+      }
+
+      switch (data.type) {
+        case 'transcriptLine':
+          if (data.line) {
+            handleTranscriptLine(data.line);
+          } else if (data.transcript_id) {
+            handleTranscriptLine(data);
+          }
+          break;
+        case 'transcriptProcessed':
+          handleTranscriptProcessed(data);
+          break;
+        case 'questionDetected':
+          handleQuestionDetected(data);
+          break;
+        case 'suggestedResponse':
+          handleSuggestedResponse(data);
+          break;
+        case 'questionMatched':
+          handleQuestionMatched(data);
+          break;
+        case 'qaPairAutoSaved':
+          handleQAPairAutoSaved(data);
+          break;
+        case 'questionUnanswered':
+          handleQuestionUnanswered(data);
+          break;
+        case 'speakerRoles':
+          handleSpeakerRoles(data);
+          break;
+        case 'suggestedQuestionsSet':
+          handleSuggestedQuestionsSet(data);
+          break;
+        case 'gapAnalysis':
+          handleGapAnalysis(data);
+          break;
+        case 'status':
+          handleStatusMessage(data);
+          break;
+        case 'meetingSummary':
+          handleMeetingSummary(data);
+          break;
+        case 'response':
+          handleChatResponse(data);
+          break;
+        case 'retroResponse':
+          handleChatResponse(data);
+          break;
+        case 'retroFeedback':
+          handleRetroFeedback(data);
+          break;
+        case 'error':
+          handleErrorMessage(data);
+          break;
+        default:
+          // Handle messages without a type field (legacy backend patterns)
+          if (data.line) {
+            handleTranscriptLine(data.line);
+          } else if (data.transcript_id) {
+            handleTranscriptLine(data);
+          }
+          break;
+      }
+    } catch (err) {
+      console.error('handleWSMessage error for type=' + (data.type || 'unknown'), err);
     }
   }
 
   // ─── Transcript processing ───
+
+  function sendForProcessing(line) {
+    // Send each non-partial line immediately for lowest latency QA detection
+    if (line.is_partial) return;
+    if (socket && socket.connected) {
+      socket.processTranscript(sessionId, [line]);
+    }
+  }
 
   function handleTranscriptLine(line) {
     if (line.is_partial) {
@@ -341,17 +376,16 @@ export default async function LiveSessionController() {
       updatePartialDisplay();
     } else {
       partialLine = null;
-      // Deduplicate
-      const exists = transcriptLines.some(l => l.transcript_id === line.transcript_id);
-      if (!exists) {
-        transcriptLines.push(line);
-        appendTranscriptLine(line);
-
-        // Send non-partial final line for Q&A detection
-        if (socket && socket.connected) {
-          socket.processTranscript(sessionId, [line]);
-        }
+      // Deduplicate using Set for O(1) lookup
+      const dedupKey = line.transcript_id || (line.text + '|' + (line.timestamp || line.start_time || ''));
+      if (transcriptIdSet.has(dedupKey)) {
+        updatePartialDisplay();
+        return;
       }
+      transcriptIdSet.add(dedupKey);
+      transcriptLines.push(line);
+      appendTranscriptLine(line);
+      sendForProcessing(line);
       // Remove partial display
       updatePartialDisplay();
     }
@@ -370,12 +404,29 @@ export default async function LiveSessionController() {
 
   // ─── Q&A event handlers ───
 
+  function findQACard(question, qaPairId) {
+    if (qaPairId) {
+      const card = qaCards.find(c => c.qaPairId === qaPairId);
+      if (card) return card;
+    }
+    if (!question) return null;
+    let card = qaCards.find(c => c.question === question);
+    if (card) return card;
+    const q = question.trim().toLowerCase();
+    card = qaCards.find(c => c.question?.trim().toLowerCase() === q);
+    if (card) return card;
+    card = qaCards.find(c => q.startsWith(c.question?.trim().toLowerCase().substring(0, 40)));
+    if (card) return card;
+    card = qaCards.find(c => c.question?.trim().toLowerCase().startsWith(q.substring(0, 40)));
+    return card || null;
+  }
+
   function handleQuestionDetected(data) {
-    // Avoid duplicates
-    const exists = qaCards.find(c => c.question === data.question);
+    const exists = findQACard(data.question, data.qa_pair_id);
     if (exists) return;
-    qaCards.unshift({
+    const card = {
       question: data.question,
+      qaPairId: data.qa_pair_id || null,
       aiAnswer: null,
       participantAnswer: null,
       speaker: data.speaker || null,
@@ -383,47 +434,119 @@ export default async function LiveSessionController() {
       detectionMethod: data.detection_method || null,
       status: 'detecting',
       timestamp: data.detected_at || data.timestamp || new Date().toISOString(),
-    });
+    };
+    qaCards.unshift(card);
     updateQACount();
-    renderQAList();
+    prependQACard(card);
   }
 
   function handleSuggestedResponse(data) {
-    const card = qaCards.find(c => c.question === data.question);
+    const card = findQACard(data.question, data.qa_pair_id);
     if (card) {
-      card.aiAnswer = data.suggested_answer;
+      card.qaPairId = card.qaPairId || data.qa_pair_id;
+      card.aiAnswer = data.suggested_answer || data.ai_answer;
       if (card.status === 'detecting') card.status = 'suggested';
-      renderQAList();
+      updateQACardInPlace(card);
+    } else {
+      const newCard = {
+        question: data.question || '',
+        qaPairId: data.qa_pair_id || null,
+        aiAnswer: data.suggested_answer || data.ai_answer || null,
+        participantAnswer: null,
+        status: 'suggested',
+        timestamp: new Date().toISOString(),
+      };
+      qaCards.unshift(newCard);
+      updateQACount();
+      prependQACard(newCard);
     }
   }
 
   function handleQAPairAutoSaved(data) {
-    let card = qaCards.find(c => c.question === data.question);
+    let card = findQACard(data.question, data.qa_pair_id);
     if (card) {
-      card.participantAnswer = data.answer;
+      card.qaPairId = card.qaPairId || data.qa_pair_id;
+      card.participantAnswer = data.answer || data.host_answer;
+      card.aiAnswer = card.aiAnswer || data.suggested_answer || data.ai_answer || null;
       card.source = data.source || 'participant';
       card.status = 'answered';
+      updateQACardInPlace(card);
     } else {
-      // QA pair arrived without a prior questionDetected (e.g. page loaded mid-session)
-      qaCards.unshift({
+      const newCard = {
         question: data.question || '',
-        aiAnswer: null,
-        participantAnswer: data.answer || '',
+        qaPairId: data.qa_pair_id || null,
+        aiAnswer: data.suggested_answer || data.ai_answer || null,
+        participantAnswer: data.answer || data.host_answer || '',
         source: data.source || 'participant',
         status: 'answered',
-        timestamp: new Date().toISOString(),
-      });
+        timestamp: data.detected_at || data.timestamp || new Date().toISOString(),
+      };
+      qaCards.unshift(newCard);
+      prependQACard(newCard);
     }
     updateQACount();
-    renderQAList();
   }
 
   function handleQuestionUnanswered(data) {
-    const card = qaCards.find(c => c.question === data.question);
+    const card = findQACard(data.question, data.qa_pair_id);
     if (card) {
       card.status = 'unanswered';
-      renderQAList();
+      updateQACardInPlace(card);
     }
+  }
+
+  // ─── Stale card recovery ───
+  // Every 8s, check for cards stuck in "detecting" for >10s and resolve via REST
+  let staleCheckInterval = null;
+  function startStaleCardRecovery() {
+    if (staleCheckInterval) return;
+    staleCheckInterval = setInterval(async () => {
+      const now = Date.now();
+      const staleCards = qaCards.filter(c =>
+        (c.status === 'detecting' || c.status === 'suggested') &&
+        (now - new Date(c.timestamp).getTime()) > 5000
+      );
+      if (staleCards.length === 0) return;
+      try {
+        const qaRes = await qaPairsApi.listBySession(sessionId);
+        const pairs = qaRes.data?.items || qaRes.data || [];
+        if (!Array.isArray(pairs)) return;
+        for (const stale of staleCards) {
+          const match = pairs.find(p =>
+            (stale.qaPairId && p.qa_pair_id === stale.qaPairId) ||
+            p.question === stale.question ||
+            p.question?.trim().toLowerCase() === stale.question?.trim().toLowerCase()
+          );
+          if (match) {
+            let changed = false;
+            if (match.suggested_answer || match.ai_answer) {
+              stale.aiAnswer = match.suggested_answer || match.ai_answer;
+              changed = true;
+            }
+            if (match.answer || match.host_answer) {
+              stale.participantAnswer = match.answer || match.host_answer;
+              stale.status = 'answered';
+              changed = true;
+            } else if (stale.aiAnswer && stale.status === 'detecting') {
+              stale.status = 'suggested';
+              changed = true;
+            }
+            if (match.qa_pair_id) stale.qaPairId = match.qa_pair_id;
+            if (changed) updateQACardInPlace(stale);
+          }
+        }
+      } catch (err) {
+        console.warn('Stale card recovery failed:', err);
+      }
+    }, 3000);
+  }
+
+  function handleSpeakerRoles(data) {
+    const map = data.role_map;
+    if (!map || typeof map !== 'object') return;
+    speakerRoleMap = map;
+    // Re-render transcript with updated speaker labels
+    renderAllTranscripts();
   }
 
   function updateQACount() {
@@ -436,23 +559,20 @@ export default async function LiveSessionController() {
       const qaRes = await qaPairsApi.listBySession(sessionId);
       const pairs = qaRes.data?.items || qaRes.data || [];
       if (!Array.isArray(pairs)) return;
-      let added = false;
       for (const qa of pairs) {
         const q = qa.question || '';
         if (!q || qaCards.find(c => c.question === q)) continue;
-        qaCards.push({
+        const newCard = {
           question: q,
           aiAnswer: qa.ai_answer || qa.suggested_answer || null,
           participantAnswer: qa.host_answer || qa.answer || null,
           source: qa.source || 'participant',
           status: 'answered',
           timestamp: qa.detected_at || qa.timestamp || qa.created_at || new Date().toISOString(),
-        });
-        added = true;
-      }
-      if (added) {
+        };
+        qaCards.push(newCard);
+        prependQACard(newCard);
         updateQACount();
-        renderQAList();
       }
     } catch (err) {
       console.warn('Failed to refresh QA pairs:', err);
@@ -544,7 +664,7 @@ export default async function LiveSessionController() {
     if (overlay) overlay.remove();
 
     // Clean up resources before navigating
-    stopTranscriptPolling();
+    stopPolling();
     stopStatusPolling();
     if (durationInterval) {
       clearInterval(durationInterval);
@@ -667,18 +787,24 @@ export default async function LiveSessionController() {
       transcriptLines = historical.sort(
         (a, b) => new Date(a.timestamp) - new Date(b.timestamp)
       );
+      // Populate dedup set from historical data
+      transcriptIdSet.clear();
+      for (const l of transcriptLines) {
+        const key = l.transcript_id || (l.text + '|' + (l.timestamp || l.start_time || ''));
+        transcriptIdSet.add(key);
+      }
       renderAllTranscripts();
-
-      // Also render retro transcript
       renderRetroTranscript();
 
-      // Connect WebSocket if session is live
-      if (uiStatus === 'live' || uiStatus === 'starting') {
+      // Connect WebSocket when session is active — transcript lines arrive via DDB Streams
+      const isActive = session.is_active === 'active';
+      const isLiveOrStarting = uiStatus === 'live' || uiStatus === 'starting';
+      if (isActive || isLiveOrStarting) {
         createSocket(sid);
         socket.connect();
-        startTranscriptPolling(sid);
-      } else if (uiStatus !== 'finished' && uiStatus !== 'failed' && uiStatus !== 'none') {
-        // Not yet live — poll bot status until it becomes live
+      }
+      // Poll bot status if not yet live, to detect when it goes live
+      if (!isLiveOrStarting && uiStatus !== 'finished' && uiStatus !== 'failed') {
         startStatusPolling(sid);
       }
     } catch (err) {
@@ -686,41 +812,17 @@ export default async function LiveSessionController() {
     }
   }
 
-  // ─── Transcript polling fallback (REST API) ───
+  // ─── QA pair fallback poll ───
 
-  function startTranscriptPolling(sid) {
-    if (transcriptPollInterval) return;
-    transcriptPollInterval = setInterval(async () => {
-      try {
-        const historical = await fetchAllTranscripts(sid);
-        if (historical.length > transcriptLines.length) {
-          const existingIds = new Set(transcriptLines.map(l => l.transcript_id));
-          const newLines = historical.filter(l => !existingIds.has(l.transcript_id));
-          if (newLines.length > 0) {
-            transcriptLines = [...transcriptLines, ...newLines].sort(
-              (a, b) => new Date(a.timestamp) - new Date(b.timestamp)
-            );
-            renderAllTranscripts();
-            renderRetroTranscript();
-          }
-        }
-      } catch (err) {
-        console.warn('Transcript poll failed:', err);
-      }
-    }, 3000);
-    // QA pair fallback poll (every 30s to catch missed WebSocket events)
-    if (!qaPollInterval) {
-      qaPollInterval = setInterval(async () => {
-        try { await refreshQAPairsFromREST(); } catch (err) { console.warn('QA poll failed:', err); }
-      }, 30000);
-    }
+  function startQAPairPolling() {
+    if (qaPollInterval) return;
+    // Poll QA pairs every 30s to catch any missed WebSocket events
+    qaPollInterval = setInterval(async () => {
+      try { await refreshQAPairsFromREST(); } catch (err) { console.warn('QA poll failed:', err); }
+    }, 10000);
   }
 
-  function stopTranscriptPolling() {
-    if (transcriptPollInterval) {
-      clearInterval(transcriptPollInterval);
-      transcriptPollInterval = null;
-    }
+  function stopPolling() {
     if (qaPollInterval) {
       clearInterval(qaPollInterval);
       qaPollInterval = null;
@@ -749,7 +851,7 @@ export default async function LiveSessionController() {
           stopStatusPolling();
           createSocket(sid);
           socket.connect();
-          startTranscriptPolling(sid);
+          startQAPairPolling();
 
           // Show live controls
           const connStatus = el.querySelector('#conn-status');
@@ -762,7 +864,7 @@ export default async function LiveSessionController() {
         } else if (newUiStatus === 'finished' || newUiStatus === 'failed') {
           // Session ended — stop polling, hide live controls, switch to retro
           stopStatusPolling();
-          stopTranscriptPolling();
+          stopPolling();
 
           const connStatus = el.querySelector('#conn-status');
           const endBtn = el.querySelector('#btn-end-session');
@@ -851,7 +953,7 @@ export default async function LiveSessionController() {
               aiAnswer: qa.ai_answer || qa.suggested_answer || null,
               participantAnswer: qa.host_answer || qa.answer || null,
               status: 'saved',
-              timestamp: qa.timestamp || qa.created_at || new Date().toISOString(),
+              timestamp: qa.detected_at || qa.timestamp || qa.created_at || new Date().toISOString(),
             });
           }
           renderQAList();
@@ -863,6 +965,7 @@ export default async function LiveSessionController() {
 
       // Init transcript (historical + WebSocket)
       const uiStatus = getUIStatus(session.bot_status);
+      console.log('[LiveSession] bot_status=' + session.bot_status + ', is_active=' + session.is_active + ', agent_id=' + (project?.agent_id || 'none'));
       initTranscript(sessionId, uiStatus);
     } catch (err) {
       pageLoading.style.display = 'none';
@@ -925,61 +1028,106 @@ export default async function LiveSessionController() {
     }
   }
 
+  const qaStatusBadges = {
+    detecting: '<span class="badge b-pri"><span class="dot"></span> Detecting</span>',
+    suggested: '<span class="badge b-ok">AI Suggested</span>',
+    answered: '<span class="badge b-summary">Answered</span>',
+    unanswered: '<span class="badge b-warn">Unanswered</span>',
+    saved: '<span class="badge b-summary">Saved</span>',
+  };
+
+  function renderQAItemHTML(qa) {
+    const time = qa.timestamp ? formatTimestamp(qa.timestamp) : '--:--';
+    const badge = qaStatusBadges[qa.status] || '';
+    const roleLabel = qa.speakerRole === 'client'
+      ? '<span class="qna-author client" style="font-size:10px;margin-right:6px">Client</span>'
+      : qa.speakerRole === 'user'
+      ? '<span class="qna-author" style="font-size:10px;margin-right:6px;background:var(--pri-50);color:var(--pri-600)">You</span>'
+      : '';
+
+    let html = '<div class="qa" data-qa-question="' + sanitize(qa.question).replace(/"/g, '&quot;') + '">'
+      + '<div class="flex jc-b items-s mb-4">'
+      + '<div class="text-xs text-t mono">' + time + '</div>'
+      + badge
+      + '</div>'
+      + '<div class="qa-q"><div class="qi">Q</div><div class="qa-txt q">' + roleLabel + sanitize(qa.question) + '</div></div>';
+
+    if (qa.participantAnswer) {
+      html += '<div class="qa-a mt-2"><div class="ai">A</div><div class="qa-txt">' + renderMarkdown(qa.participantAnswer) + '</div></div>';
+    }
+
+    if (qa.aiAnswer) {
+      html += '<div class="qa-a mt-2" style="border-left:3px solid var(--pri-300);padding-left:10px;margin-left:28px">'
+        + '<div class="text-xs mono fw-m" style="color:var(--pri-500);margin-bottom:2px">💡 AI Suggestion</div>'
+        + '<div class="text-sm" style="color:var(--gray-600);line-height:1.5">' + renderMarkdown(qa.aiAnswer) + '</div>'
+        + '</div>';
+    } else if (qa.status === 'detecting' && qa.speakerRole !== 'user') {
+      html += '<div class="qa-a mt-2"><div class="ai" style="background:var(--gray-100);color:var(--gray-600)">AI</div><div class="qa-txt" style="color:var(--gray-400);font-style:italic">Generating suggestion...</div></div>';
+    }
+
+    if (qa.status === 'unanswered' && !qa.participantAnswer) {
+      html += '<div class="text-xs" style="color:var(--warn-600);margin-top:6px;margin-left:28px">⚠️ No verbal answer was captured for this question</div>';
+    }
+
+    html += '</div>';
+    return html;
+  }
+
   function renderQAList() {
-    const statusBadges = {
-      detecting: '<span class="badge b-pri"><span class="dot"></span> Detecting</span>',
-      suggested: '<span class="badge b-ok">AI Suggested</span>',
-      answered: '<span class="badge b-summary">Answered</span>',
-      unanswered: '<span class="badge b-warn">Unanswered</span>',
-      saved: '<span class="badge b-summary">Saved</span>',
-    };
-
-    const renderQAItem = (qa) => {
-      const time = qa.timestamp ? formatTimestamp(qa.timestamp) : '--:--';
-      const badge = statusBadges[qa.status] || '';
-      const roleLabel = qa.speakerRole === 'client'
-        ? '<span class="qna-author client" style="font-size:10px;margin-right:6px">Client</span>'
-        : qa.speakerRole === 'user'
-        ? '<span class="qna-author" style="font-size:10px;margin-right:6px;background:var(--pri-50);color:var(--pri-600)">You</span>'
-        : '';
-
-      let html = '<div class="qa">'
-        + '<div class="flex jc-b items-s mb-4">'
-        + '<div class="text-xs text-t mono">' + time + '</div>'
-        + badge
-        + '</div>'
-        + '<div class="qa-q"><div class="qi">Q</div><div class="qa-txt q">' + roleLabel + sanitize(qa.question) + '</div></div>';
-
-      // Show participant answer if available
-      if (qa.participantAnswer) {
-        html += '<div class="qa-a mt-2"><div class="ai">A</div><div class="qa-txt">' + sanitize(qa.participantAnswer) + '</div></div>';
-      }
-
-      // Show AI suggested answer
-      if (qa.aiAnswer) {
-        html += '<div class="qa-a mt-2" style="border-left:3px solid var(--pri-300);padding-left:10px;margin-left:28px">'
-          + '<div class="text-xs mono fw-m" style="color:var(--pri-500);margin-bottom:2px">💡 AI Suggestion</div>'
-          + '<div class="text-sm" style="color:var(--gray-600);line-height:1.5">' + sanitize(qa.aiAnswer) + '</div>'
-          + '</div>';
-      } else if (qa.status === 'detecting' && qa.speakerRole !== 'user') {
-        html += '<div class="qa-a mt-2"><div class="ai" style="background:var(--gray-100);color:var(--gray-600)">AI</div><div class="qa-txt" style="color:var(--gray-400);font-style:italic">Generating suggestion...</div></div>';
-      }
-
-      // Show unanswered notice
-      if (qa.status === 'unanswered' && !qa.participantAnswer) {
-        html += '<div class="text-xs" style="color:var(--warn-600);margin-top:6px;margin-left:28px">⚠️ No verbal answer was captured for this question</div>';
-      }
-
-      html += '</div>';
-      return html;
-    };
-
     const qaHtml = qaCards.length > 0
-      ? qaCards.map(renderQAItem).join('')
+      ? qaCards.map(renderQAItemHTML).join('')
       : '<div class="empty"><div class="empty-icon">💬</div><div class="empty-title">No Q&A pairs yet</div><div class="empty-desc">Questions will appear here as they are detected</div></div>';
 
     el.querySelector('[data-bind="liveQaList"]').innerHTML = qaHtml;
     el.querySelector('[data-bind="retroQaList"]').innerHTML = qaHtml;
+  }
+
+  // Incremental DOM updates for low-latency QA rendering
+  function prependQACard(qa) {
+    const html = renderQAItemHTML(qa);
+    for (const bind of ['liveQaList', 'retroQaList']) {
+      const container = el.querySelector('[data-bind="' + bind + '"]');
+      if (!container) continue;
+      // Remove empty state if present
+      const empty = container.querySelector('.empty');
+      if (empty) empty.remove();
+      container.insertAdjacentHTML('afterbegin', html);
+    }
+  }
+
+  function updateQACardInPlace(qa) {
+    const html = renderQAItemHTML(qa);
+    const idx = qaCards.indexOf(qa);
+    for (const bind of ['liveQaList', 'retroQaList']) {
+      const container = el.querySelector('[data-bind="' + bind + '"]');
+      if (!container) continue;
+      const cards = container.querySelectorAll('.qa');
+      if (idx >= 0 && idx < cards.length) {
+        cards[idx].outerHTML = html;
+      } else {
+        // Fallback: try attribute match
+        let existing = null;
+        for (const card of container.querySelectorAll('.qa[data-qa-question]')) {
+          const attr = card.getAttribute('data-qa-question');
+          if (attr === qa.question || attr === sanitize(qa.question)) {
+            existing = card;
+            break;
+          }
+        }
+        if (existing) existing.outerHTML = html;
+      }
+    }
+  }
+
+  function renderSuggestedQuestions() {
+    const container = el.querySelector('[data-bind="gapCards"]');
+    if (!container || suggestedQuestions.length === 0) return;
+    const html = '<div class="card mb-4" style="border-color:var(--pri-200);background:var(--pri-25)">'
+      + '<div class="card-body" style="padding:12px 16px">'
+      + '<div class="text-xs mono fw-m" style="color:var(--pri-600);margin-bottom:8px">💡 SUGGESTED QUESTIONS</div>'
+      + suggestedQuestions.map(q => '<div class="text-sm text-p" style="padding:4px 0;border-bottom:1px solid var(--pri-100)">' + sanitize(q) + '</div>').join('')
+      + '</div></div>';
+    container.insertAdjacentHTML('afterbegin', html);
   }
 
   function setupEventListeners() {
@@ -1108,8 +1256,9 @@ export default async function LiveSessionController() {
   // Cleanup function
   el._cleanup = () => {
     if (durationInterval) clearInterval(durationInterval);
+    if (staleCheckInterval) clearInterval(staleCheckInterval);
     stopStatusPolling();
-    stopTranscriptPolling();
+    stopPolling();
     if (socket) {
       socket.disconnect();
       socket = null;

@@ -3,6 +3,7 @@ import { qaPairsApi } from '../../api/qaPairs.js';
 import { projectsApi } from '../../api/projects.js';
 import { sessionsApi } from '../../api/sessions.js';
 import { sanitize } from '../../utils/sanitize.js';
+import { renderMarkdown } from '../../utils/markdown.js';
 import { formatDate } from '../../utils/format.js';
 
 const PAGE_SIZE = 20;
@@ -115,8 +116,8 @@ export default async function QAMonitorController(params) {
           ${getConfidenceBadge(qa.confidence)}
         </div>
         <div class="qa-q"><div class="qi">Q</div><div class="qa-txt q">${sanitize(qa.question || '')}</div></div>
-        ${answer ? `<div class="qa-a"><div class="ai">A</div><div class="qa-txt">${sanitize(answer)}</div></div>` : ''}
-        ${aiAnswer ? `<div class="qa-a" style="border-left:3px solid var(--pri-300);margin-left:12px;padding-left:10px"><div class="ai" style="background:var(--pri-100);color:var(--pri-700)">AI</div><div class="qa-txt">${sanitize(aiAnswer)}</div></div>` : ''}
+        ${answer ? `<div class="qa-a"><div class="ai">A</div><div class="qa-txt">${renderMarkdown(answer)}</div></div>` : ''}
+        ${aiAnswer ? `<div class="qa-a" style="border-left:3px solid var(--pri-300);margin-left:12px;padding-left:10px"><div class="text-xs mono fw-m" style="color:var(--pri-500);margin-bottom:2px">💡 AI Suggestion</div><div class="text-sm" style="color:var(--gray-600);line-height:1.5">${renderMarkdown(aiAnswer)}</div></div>` : ''}
       </div>`;
     }).join('');
 

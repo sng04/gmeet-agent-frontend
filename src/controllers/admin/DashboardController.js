@@ -6,6 +6,7 @@ import { navigate } from '../../router.js';
 import { projectsApi } from '../../api/projects.js';
 import { sessionsApi } from '../../api/sessions.js';
 import { usersApi } from '../../api/users.js';
+import { qaPairsApi } from '../../api/qaPairs.js';
 import { formatDate } from '../../utils/format.js';
 import { sanitize } from '../../utils/sanitize.js';
 
@@ -20,7 +21,7 @@ function getUIStatus(botStatus) {
     'in_meeting': 'live',
     'running': 'live',
     'stopping': 'stopping',
-    'stopped': 'stopping',
+    'stopped': 'finished',
     'completed': 'finished',
     'failed': 'failed',
   };
@@ -39,12 +40,6 @@ function calculateDuration(startTime, endTime = null) {
   return mins > 0 ? hours + 'h ' + mins + 'm' : hours + 'h';
 }
 
-const mockQA = [
-  { question: 'What kind of encryption do you use for data at rest?', answer: 'We use AES-256 encryption for all data at rest, managed through AWS KMS...', session: 'Q3 Architecture Review', time: '09:05:32', conf: 92 },
-  { question: 'How does the system handle concurrent users?', answer: 'Our system uses auto-scaling through ECS Fargate, dynamically adjusting...', session: 'Q3 Architecture Review', time: '09:12:18', conf: 88 },
-  { question: 'Can we integrate this with our existing Slack workspace?', answer: 'Currently, the system focuses on Google Meet integration. Slack...', session: 'Integration Planning', time: '10:35:41', conf: 85 },
-];
-
 export default async function DashboardController(params) {
   const el = await loadTemplate('/templates/admin/dashboard.html', 'dashboard');
 
@@ -56,7 +51,9 @@ export default async function DashboardController(params) {
   let projects = [];
   let sessions = [];
   let users = [];
+  let qaPairs = [];
   let projectMap = {};
+  let sessionMap = {};
   let sessionPollInterval = null;
 
   el._cleanup = () => {
@@ -66,10 +63,11 @@ export default async function DashboardController(params) {
   async function loadData() {
     try {
       // Load all data in parallel
-      const [projectsRes, sessionsRes, usersRes] = await Promise.all([
+      const [projectsRes, sessionsRes, usersRes, qaRes] = await Promise.all([
         projectsApi.list(),
         sessionsApi.list({ limit: 50 }),
-        usersApi.list()
+        usersApi.list(),
+        qaPairsApi.list({ limit: 10 }),
       ]);
 
       projects = projectsRes.data?.items || [];
@@ -77,11 +75,18 @@ export default async function DashboardController(params) {
       sessions.sort((a, b) => new Date(b.created_at || b.start_time || 0) - new Date(a.created_at || a.start_time || 0));
       users = usersRes.data?.items || usersRes.data?.users || [];
       if (!Array.isArray(users)) users = [];
+      qaPairs = qaRes.data?.items || [];
 
       // Build project lookup map
       projectMap = {};
       projects.forEach(p => {
         projectMap[p.project_id] = p.name || 'Untitled';
+      });
+
+      // Build session lookup map
+      sessionMap = {};
+      sessions.forEach(s => {
+        sessionMap[s.session_id] = s.name || 'Untitled';
       });
 
       // Calculate stats
@@ -129,7 +134,7 @@ export default async function DashboardController(params) {
       { icon: '📊', iconColor: 'red', label: 'Active Sessions', value: String(activeSessions), meta: totalSessions + ' total sessions · Click to view →', link: 'sessions', live: activeSessions > 0 },
       { icon: '🤖', iconColor: 'green', label: 'Active Agents', value: '—', meta: 'Coming soon', link: 'agents' },
       { icon: '📁', iconColor: 'amber', label: 'Projects', value: String(totalProjects), meta: totalUsers + ' total users', link: 'projects' },
-      { icon: '💬', iconColor: 'cyan', label: 'Q&A Pairs', value: '—', meta: 'Coming soon', link: 'sessions' },
+      { icon: '💬', iconColor: 'cyan', label: 'Q&A Pairs', value: String(qaPairs.length), meta: 'Detected across sessions', link: 'qa' },
     ];
 
     statsGrid.innerHTML = '';
@@ -170,20 +175,35 @@ export default async function DashboardController(params) {
   }
 
   function renderQATable() {
+    const container = el.querySelector('[data-bind="qaTable"]');
+
+    if (qaPairs.length === 0) {
+      container.innerHTML = '<div class="card"><div class="card-hdr"><div class="text-md fw-sb">Recent Q&A Pairs</div></div><div class="card-body"><div class="empty"><div class="empty-icon">💬</div><div class="empty-title">No Q&A pairs yet</div><div class="empty-desc">Questions will appear here as they are detected in sessions</div></div></div></div>';
+      return;
+    }
+
     const qaTable = Table({
       title: 'Recent Q&A Pairs',
       actions: '<button class="btn btn-g btn-sm" data-action="viewAllQA">View All →</button>',
       columns: [
-        { label: 'Question', render: r => '<strong style="max-width:220px" class="truncate">' + sanitize(r.question) + '</strong>', width: '25%' },
-        { label: 'Answer', render: r => '<span style="max-width:280px" class="truncate">' + sanitize(r.answer) + '</span>', width: '30%' },
-        { label: 'Session', key: 'session' },
-        { label: 'Time', key: 'time', className: 'mono text-xs' },
-        { label: 'Conf.', render: r => '<span class="badge ' + (r.conf >= 90 ? 'b-ok' : 'b-warn') + '">' + r.conf + '%</span>' },
+        { label: 'Question', render: r => '<div style="max-width:200px;white-space:normal;word-break:break-word;line-height:1.4"><strong>' + sanitize(r.question || '') + '</strong></div>', width: '30%' },
+        { label: 'Answer', render: r => {
+          const answer = r.host_answer || r.answer || '';
+          const aiAnswer = r.ai_answer || r.suggested_answer || '';
+          if (answer) return '<div style="max-width:240px;white-space:normal;word-break:break-word;line-height:1.4">' + sanitize(answer) + '</div>';
+          if (aiAnswer) return '<div style="max-width:240px;white-space:normal;word-break:break-word;line-height:1.4;color:var(--pri-500)">💡 ' + sanitize(aiAnswer) + '</div>';
+          return '<span class="text-t">—</span>';
+        }, width: '35%' },
+        { label: 'Session', render: r => '<span class="text-xs">' + sanitize(sessionMap[r.session_id] || '—') + '</span>', width: '15%' },
+        { label: 'Time', render: r => {
+          const t = r.detected_at || r.timestamp || r.created_at;
+          return t ? '<span class="mono text-xs">' + formatDate(t, { hour: '2-digit', minute: '2-digit' }) + '</span>' : '—';
+        }, width: '10%' },
       ],
-      data: mockQA,
+      data: qaPairs.slice(0, 5),
     });
-    el.querySelector('[data-bind="qaTable"]').innerHTML = '';
-    el.querySelector('[data-bind="qaTable"]').appendChild(qaTable);
+    container.innerHTML = '';
+    container.appendChild(qaTable);
   }
 
   loadData();

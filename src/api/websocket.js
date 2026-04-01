@@ -25,12 +25,14 @@ export class MeetingSocket {
     }
 
     let url = `${WS_URL}?session_id=${this.sessionId}`;
-    if (this.agentId) url += `&agent_id=${this.agentId}`;
+    if (this.agentId && this.agentId !== 'undefined') url += `&agent_id=${this.agentId}`;
+    console.log('[WS] Connecting to:', url);
 
     this.ws = new WebSocket(url);
     this._intentionalClose = false;
 
     this.ws.onopen = () => {
+      console.log('[WS] Connected to', url);
       this._reconnectAttempts = 0;
       this.onOpen();
     };
@@ -38,13 +40,15 @@ export class MeetingSocket {
     this.ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
+        console.log('[WS] recv:', data.type || 'no-type');
         this.onMessage(data);
-      } catch {
-        console.error('WebSocket: failed to parse message', event.data);
+      } catch (err) {
+        console.error('[WS] message handling error', err, event.data);
       }
     };
 
     this.ws.onclose = (event) => {
+      console.log('[WS] Closed, code=' + event.code + ', reason=' + event.reason);
       this.onClose(event);
       if (!this._intentionalClose && this._reconnectAttempts < this._maxReconnects) {
         this._reconnectAttempts++;
@@ -61,9 +65,10 @@ export class MeetingSocket {
 
   send(action, payload = {}) {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-      console.error('WebSocket: not connected');
+      console.error('[WS] send failed — not connected, action=' + action);
       return false;
     }
+    console.log('[WS] send:', action);
     this.ws.send(JSON.stringify({ action, ...payload }));
     return true;
   }
@@ -71,6 +76,7 @@ export class MeetingSocket {
   // --- Action helpers ---
 
   sendMessage(sessionId, message) {
+    console.log('[WS] sendMessage session_id=' + sessionId);
     return this.send('sendMessage', { session_id: sessionId, message });
   }
 

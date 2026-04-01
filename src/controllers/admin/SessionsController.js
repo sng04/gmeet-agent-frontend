@@ -16,7 +16,7 @@ function getUIStatus(botStatus) {
     'in_meeting': 'live',
     'running': 'live',
     'stopping': 'stopping',
-    'stopped': 'stopping',
+    'stopped': 'finished',
     'completed': 'finished',
     'failed': 'failed',
   };

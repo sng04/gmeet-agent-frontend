@@ -33,7 +33,7 @@ function getUIStatus(botStatus) {
   const map = {
     'none': 'none', 'pending': 'starting', 'queued': 'starting',
     'starting': 'starting', 'joining': 'starting', 'in_meeting': 'live',
-    'running': 'live', 'stopping': 'stopping', 'stopped': 'stopping',
+    'running': 'live', 'stopping': 'stopping', 'stopped': 'finished',
     'completed': 'finished', 'failed': 'failed',
   };
   return map[botStatus] || botStatus;
@@ -315,7 +315,7 @@ export default async function RetroSessionController(params) {
           const hostAnswer = qa.host_answer || qa.answer || '';
           const aiAnswer = qa.ai_answer || qa.suggested_answer || '';
           const confidence = qa.confidence;
-          const time = qa.timestamp ? formatTimestamp(qa.timestamp) : qa.created_at ? formatTimestamp(qa.created_at) : '';
+          const time = qa.detected_at ? formatTimestamp(qa.detected_at) : qa.timestamp ? formatTimestamp(qa.timestamp) : qa.created_at ? formatTimestamp(qa.created_at) : '';
           const author = qa.author || 'Client';
 
           return '<div class="qa">'
@@ -324,8 +324,8 @@ export default async function RetroSessionController(params) {
             + (confidence != null ? '<span class="badge ' + (confidence >= 90 ? 'b-ok' : 'b-warn') + '">' + confidence + '%</span>' : '')
             + '</div>'
             + '<div class="qa-q"><div class="qi">Q</div><div class="qa-txt q"><span class="qna-author client" style="font-size:10px;margin-right:6px">' + sanitize(author) + '</span>' + sanitize(question) + '</div></div>'
-            + (hostAnswer ? '<div class="qa-a mt-2"><div class="ai">A</div><div class="qa-txt">' + sanitize(hostAnswer) + '</div></div>' : '')
-            + (aiAnswer ? '<div class="qa-a mt-2"><div class="ai" style="background:var(--gray-100);color:var(--gray-600)">AI</div><div class="qa-txt" style="color:var(--gray-500)">' + sanitize(aiAnswer) + '</div></div>' : '')
+            + (hostAnswer ? '<div class="qa-a mt-2"><div class="ai">A</div><div class="qa-txt">' + renderMarkdown(hostAnswer) + '</div></div>' : '')
+            + (aiAnswer ? '<div class="qa-a mt-2" style="border-left:3px solid var(--pri-300);padding-left:10px;margin-left:28px"><div class="text-xs mono fw-m" style="color:var(--pri-500);margin-bottom:2px">💡 AI Suggestion</div><div class="text-sm" style="color:var(--gray-600);line-height:1.5">' + renderMarkdown(aiAnswer) + '</div></div>' : '')
             + '</div>';
         }).join('')
       : '<div class="empty"><div class="empty-icon">💬</div><div class="empty-title">No Q&A pairs</div><div class="empty-desc">No questions were detected</div></div>';

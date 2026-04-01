@@ -13,7 +13,7 @@ export function Table({ title, columns, data, footer, actions }) {
 
   el.innerHTML = `
     ${headerHtml}
-    <table>
+    <table style="table-layout:fixed;width:100%">
       <thead>
         <tr>${columns.map(col => `<th${col.width ? ` style="width:${col.width}"` : ''}>${col.label}</th>`).join('')}</tr>
       </thead>

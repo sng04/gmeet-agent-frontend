@@ -315,23 +315,23 @@ export default async function GmailCredentialsController(params) {
 
     tableContainer.innerHTML = '';
     tableContainer.appendChild(tableWrap);
-
-    // Handle action buttons
-    tableContainer.addEventListener('click', (e) => {
-      const btn = e.target.closest('[data-action]');
-      if (!btn) return;
-
-      e.stopPropagation();
-      const action = btn.dataset.action;
-      const id = btn.dataset.id;
-
-      if (action === 'edit') {
-        navigate(`gmail-edit?id=${id}`);
-      } else if (action === 'delete') {
-        handleDelete(id, btn.dataset.email);
-      }
-    });
   }
+
+  // Handle action buttons (single delegated listener — outside renderCredentials)
+  el.querySelector('[data-bind="credentialsList"]').addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-action]');
+    if (!btn) return;
+
+    e.stopPropagation();
+    const action = btn.dataset.action;
+    const id = btn.dataset.id;
+
+    if (action === 'edit') {
+      navigate(`gmail-edit?id=${id}`);
+    } else if (action === 'delete') {
+      handleDelete(id, btn.dataset.email);
+    }
+  });
 
   // Load data after render (non-blocking)
   loadCredentials();
